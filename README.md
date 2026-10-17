@@ -26,6 +26,31 @@ of dollars for, on hardware you already own, with no subscription and no cloud a
 - **Least-privilege tokens.** Nodes get a write-only token; Grafana gets a read-only one. A lost sensor Pi
   can't read or delete your history.
 - **°F or °C.** Every temperature is stored in both; dashboards have a units switch.
+- **A status sign that tells you when a collector is down.** You don't have to open a dashboard to know
+  something's wrong. See below.
+
+## The status sign: alerting you can see from across the room
+
+A dashboard only helps if you look at it. TankWatch drives an inexpensive LED matrix sign (Pimoroni Galactic
+Unicorn) that sits on a shelf and shows every collector's state by colour:
+
+| Colour | Meaning |
+|---|---|
+| 🟢 Green | The collector is reporting normally |
+| 🟡 Amber | It's reporting, but something's wrong: undervoltage, CPU throttling, or running hot |
+| 🔴 Red | **The collector has gone silent.** No report for 90 seconds. It has crashed, lost power, or dropped off the network |
+
+The sign reads straight from the hub's database with its own read-only token. If the hub itself stops
+answering, the sign falls back to checking each Pi directly over the network. That way a dead hub can't
+make every collector look healthy. Between alerts it rotates through the latest readings (water and air
+temperature, humidity), so it earns its shelf space.
+
+This matters most for the failure people don't think about. When a sensor box dies, the tank is fine, but
+you've stopped watching it. Without the sign, you find out days later from a gap in a graph. With it, you
+find out the next time you walk past.
+
+> The sign has run the original fish-tank setup since October 2026. Its firmware is being moved into this
+> repo next; see the roadmap.
 
 ## Quick start
 
@@ -70,9 +95,9 @@ feeder and reservoir levels, water-leak detection.
 ## Roadmap
 
 - [x] Containerized hub and sensor node, plug-in sensors, store-and-forward, node health
+- [ ] **Status sign firmware** (Pimoroni Galactic Unicorn): green / amber / red per collector, red when one goes silent. Running in the original setup and being ported next
 - [ ] Alerts (Grafana alerting to email / phone) with sensible defaults per sensor
 - [ ] pH, TDS, soil moisture, level sensors
-- [ ] LED status display (Pimoroni Galactic Unicorn) showing every node at a glance
 - [ ] Network traffic mapping per node (NetFlow)
 - [ ] Automated nightly backups of every node and the hub, with monthly archives
 - [ ] Integrations: smart lighting, wearables
