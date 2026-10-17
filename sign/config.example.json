@@ -1,0 +1,23 @@
+{
+  "_comment": "Copy to config.json and edit. Wi-Fi password and the read-only token go in secrets.py, not here.",
+  "hub_url": "http://192.168.1.10:8086",
+  "org": "tankwatch",
+  "bucket": "sensors",
+  "wifi_country": "US",
+
+  "_nodes": "Up to 4 collectors, shown top to bottom as the status blocks on the right edge. 'name' must match the node name the collector reports (TANKWATCH_NODE, or its host name). 'label' is what the shows print: keep it to 3 characters. 'address' is only used if the hub stops answering, to check the collector directly. Mark the computer running the hub with \"hub\": true. 'icon': 'fish' draws a fish on the uptime screen, numbered with the label's last digit.",
+  "nodes": [
+    {"name": "node1", "label": "N1", "address": "192.168.1.21", "icon": "fish"},
+    {"name": "node2", "label": "N2", "address": "192.168.1.22", "icon": "fish"},
+    {"name": "hub",   "label": "HUB", "address": "192.168.1.10", "hub": true}
+  ],
+
+  "_readings": "Which location's air and water readings the sign shows (the 'location' in each collector's config.yaml). Leave one out and its screen shows --.",
+  "air_location": "living-room",
+  "water_location": "living-room-tank",
+
+  "_ranges": "Colours: blue below the range, green inside it, orange above it (degrees F).",
+  "air_range_f": [68, 80],
+  "water_range_f": [74, 82],
+  "hot_cpu_c": 77
+}

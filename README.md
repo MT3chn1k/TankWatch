@@ -49,8 +49,8 @@ This matters most for the failure people don't think about. When a sensor box di
 you've stopped watching it. Without the sign, you find out days later from a gap in a graph. With it, you
 find out the next time you walk past.
 
-> The sign has run the original fish-tank setup since October 2026. Its firmware is being moved into this
-> repo next; see the roadmap.
+Setup, buttons and the styles it can show (including a Road Rash race against your collectors) are in
+[sign/README.md](sign/README.md). Which collectors and readings it shows is one small `config.json`.
 
 ## Quick start
 
@@ -95,7 +95,7 @@ feeder and reservoir levels, water-leak detection.
 ## Roadmap
 
 - [x] Containerized hub and sensor node, plug-in sensors, store-and-forward, node health
-- [ ] **Status sign firmware** (Pimoroni Galactic Unicorn): green / amber / red per collector, red when one goes silent. Running in the original setup and being ported next
+- [x] **Status sign** (Pimoroni Galactic Unicorn): green / amber / red per collector, red when one goes silent
 - [ ] Alerts (Grafana alerting to email / phone) with sensible defaults per sensor
 - [ ] pH, TDS, soil moisture, level sensors
 - [ ] Network traffic mapping per node (NetFlow)
