@@ -1,0 +1,17 @@
+# Run the agent without Docker (see docs/install-node.md).
+[Unit]
+Description=TankWatch sensor node
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/opt/tankwatch/node
+EnvironmentFile=/opt/tankwatch/node/.env
+Environment=TANKWATCH_CONFIG=/opt/tankwatch/node/config.yaml
+ExecStart=/opt/tankwatch/venv/bin/python tankwatch_node.py
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target

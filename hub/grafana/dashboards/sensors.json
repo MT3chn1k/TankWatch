@@ -1,0 +1,207 @@
+{
+  "uid": "tankwatch-sensors",
+  "title": "TankWatch – Sensors",
+  "tags": [
+    "tankwatch"
+  ],
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Now",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "tankwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "tankwatch-influx"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -1h, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement != \"node_health\" and r._field == \"${unit}\")\n  |> filter(fn: (r) => contains(value: r.location, set: ${location:json}))\n  |> last()\n  |> map(fn: (r) => ({_time: r._time, _value: r._value, _field: r.location + \" \" + r._measurement + (if exists r.probe_name and r.probe_name != \"\" then \" (\" + r.probe_name + \")\" else \"\")}))\n  |> group(columns: [\"_field\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "suffix:°",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Temperature",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "tankwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "tankwatch-influx"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement != \"node_health\" and r._field == \"${unit}\")\n  |> filter(fn: (r) => contains(value: r.location, set: ${location:json}))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({_time: r._time, _value: r._value, _field: r.location + \" \" + r._measurement + (if exists r.probe_name and r.probe_name != \"\" then \" (\" + r.probe_name + \")\" else \"\")}))\n  |> group(columns: [\"_field\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix:°",
+          "custom": {
+            "lineWidth": 2,
+            "spanNulls": 300000,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Humidity",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "tankwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "tankwatch-influx"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._field == \"humidity\")\n  |> filter(fn: (r) => contains(value: r.location, set: ${location:json}))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({_time: r._time, _value: r._value, _field: r.location + \" \" + r._measurement + (if exists r.probe_name and r.probe_name != \"\" then \" (\" + r.probe_name + \")\" else \"\")}))\n  |> group(columns: [\"_field\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 2,
+            "spanNulls": 300000,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "location",
+        "label": "Location",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "tankwatch-influx"
+        },
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: v.defaultBucket, tag: \"location\", start: -30d)"
+      },
+      {
+        "name": "unit",
+        "label": "Units",
+        "type": "custom",
+        "query": "°F : temp_f,°C : temp_c",
+        "current": {
+          "text": "°F",
+          "value": "temp_f"
+        },
+        "options": [
+          {
+            "text": "°F",
+            "value": "temp_f",
+            "selected": true
+          },
+          {
+            "text": "°C",
+            "value": "temp_c",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  }
+}

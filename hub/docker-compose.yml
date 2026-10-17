@@ -1,0 +1,47 @@
+# TankWatch hub: InfluxDB stores the readings, Grafana shows them.
+# First time: ./setup.sh  (creates .env with passwords and tokens, then starts everything)
+services:
+  influxdb:
+    image: influxdb:2.7.11
+    container_name: tankwatch-influxdb
+    restart: unless-stopped
+    ports: ["8086:8086"]
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_ADMIN_USER:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_ADMIN_PASSWORD:?run ./setup.sh first}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUX_ORG:-tankwatch}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUX_BUCKET:-sensors}
+      DOCKER_INFLUXDB_INIT_RETENTION: ${INFLUX_RETENTION:-0}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_ADMIN_TOKEN:?run ./setup.sh first}
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      retries: 12
+
+  grafana:
+    image: grafana/grafana-oss:11.6.0
+    container_name: tankwatch-grafana
+    restart: unless-stopped
+    ports: ["3000:3000"]
+    depends_on:
+      influxdb: {condition: service_healthy}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?run ./setup.sh first}
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/sensors.json
+      INFLUX_ORG: ${INFLUX_ORG:-tankwatch}
+      INFLUX_BUCKET: ${INFLUX_BUCKET:-sensors}
+      INFLUX_READ_TOKEN: ${INFLUX_READ_TOKEN:-}
+
+volumes:
+  influxdb-data:
+  influxdb-config:
+  grafana-data:

@@ -1,0 +1,506 @@
+{
+  "uid": "tankwatch-health",
+  "title": "TankWatch – Node health",
+  "tags": [
+    "tankwatch"
+  ],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Reporting (last 10 min)",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "tankwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "tankwatch-influx"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -10m, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_health\" and contains(value: r.node, set: ${node:json}))\n  |> filter(fn: (r) => r._field == \"load1\")\n  |> count()\n  |> map(fn: (r) => ({_time: now(), _value: if r._value > 0 then 1 else 0, _field: r.node}))\n  |> group(columns: [\"_field\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "noValue": "DOWN",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Undervolt now",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "tankwatch-influx"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "tankwatch-influx"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -10m, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_health\" and contains(value: r.node, set: ${node:json}))\n  |> filter(fn: (r) => r._field == \"undervolt_now\")\n  |> max()\n  |> map(fn: (r) => ({_time: r._time, _value: r._value, _field: r.node}))\n  |> group(columns: [\"_field\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OK"
+                },
+                "1": {
+                  "text": "UNDERVOLT"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Throttled now",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "tankwatch-influx"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "tankwatch-influx"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -10m, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_health\" and contains(value: r.node, set: ${node:json}))\n  |> filter(fn: (r) => r._field == \"throttled_now\")\n  |> max()\n  |> map(fn: (r) => ({_time: r._time, _value: r._value, _field: r.node}))\n  |> group(columns: [\"_field\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OK"
+                },
+                "1": {
+                  "text": "THROTTLED"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "CPU temperature",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "tankwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "tankwatch-influx"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_health\" and contains(value: r.node, set: ${node:json}))\n  |> filter(fn: (r) => r._field == \"${unit}\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({_time: r._time, _value: r._value, _field: r.node}))\n  |> group(columns: [\"_field\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix:°",
+          "custom": {
+            "lineWidth": 2,
+            "spanNulls": 300000,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Load (1 min)",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "tankwatch-influx"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "tankwatch-influx"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_health\" and contains(value: r.node, set: ${node:json}))\n  |> filter(fn: (r) => r._field == \"load1\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({_time: r._time, _value: r._value, _field: r.node}))\n  |> group(columns: [\"_field\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "spanNulls": 300000,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Memory used",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "tankwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "tankwatch-influx"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_health\" and contains(value: r.node, set: ${node:json}))\n  |> filter(fn: (r) => r._field == \"mem_used_pct\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({_time: r._time, _value: r._value, _field: r.node}))\n  |> group(columns: [\"_field\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 2,
+            "spanNulls": 300000,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Disk used",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "tankwatch-influx"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "tankwatch-influx"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_health\" and contains(value: r.node, set: ${node:json}))\n  |> filter(fn: (r) => r._field == \"disk_used_pct\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> map(fn: (r) => ({_time: r._time, _value: r._value, _field: r.node}))\n  |> group(columns: [\"_field\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 2,
+            "spanNulls": 300000,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Undervolt / throttle events",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "tankwatch-influx"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "tankwatch-influx"
+          },
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_health\" and contains(value: r.node, set: ${node:json}))\n  |> filter(fn: (r) => r._field == \"undervolt_now\" or r._field == \"throttled_now\")\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n  |> map(fn: (r) => ({_time: r._time, _value: r._value, _field: r.node + \" \" + r._field}))\n  |> group(columns: [\"_field\"])\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "spanNulls": 300000,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "node",
+        "label": "Node",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "tankwatch-influx"
+        },
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: v.defaultBucket, tag: \"node\", predicate: (r) => r._measurement == \"node_health\", start: -30d)"
+      },
+      {
+        "name": "unit",
+        "label": "Units",
+        "type": "custom",
+        "query": "°F : temp_f,°C : temp_c",
+        "current": {
+          "text": "°F",
+          "value": "temp_f"
+        },
+        "options": [
+          {
+            "text": "°F",
+            "value": "temp_f",
+            "selected": true
+          },
+          {
+            "text": "°C",
+            "value": "temp_c",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  }
+}

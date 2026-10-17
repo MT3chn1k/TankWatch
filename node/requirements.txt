@@ -1,0 +1,4 @@
+PyYAML==6.0.2
+# Only needed for the dht sensor type:
+adafruit-circuitpython-dht==4.0.9
+adafruit-blinka==8.56.0

@@ -1,0 +1,19 @@
+# Which sensors this node has, where they are, and how often to read them.
+# `location` is what Grafana groups by: a tank, a plant shelf, the cat feeder, a room.
+sensors:
+  - type: node_health          # the Pi itself: CPU temp, undervolt/throttle, load, memory, disk
+    interval_s: 30
+
+  - type: dht                  # air temperature + humidity
+    location: living-room
+    interval_s: 60
+    options: {model: dht11, pin: D17}
+
+  - type: ds18b20              # waterproof probe(s) on 1-Wire, GPIO4
+    location: living-room-tank
+    interval_s: 60
+    options:
+      names: {}                # e.g. {28-1f3bd446615d: main-tank}
+
+  # - type: mock               # fake readings, for testing without hardware
+  #   location: test

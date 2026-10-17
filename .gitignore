@@ -1,0 +1,10 @@
+# Secrets and per-install settings
+.env
+node/config.yaml
+secrets.py
+*-credentials.txt
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

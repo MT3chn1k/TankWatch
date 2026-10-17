@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 560" font-family="Segoe UI, Arial, sans-serif" font-size="14">
+  <rect width="780" height="560" fill="#ffffff"/>
+  <text x="20" y="30" font-size="20" font-weight="bold" fill="#222">Raspberry Pi: add a DHT11 air sensor</text>
+  <text x="20" y="52" fill="#555">Pi 3B+ header, end furthest from the USB ports. Odd pins inner row, even pins board edge. Pins 1-18 shown.</text>
+
+  <!-- header -->
+  <rect x="40" y="76" width="150" height="318" rx="6" fill="#1d3b1d"/>
+  <g font-size="11" fill="#fff" text-anchor="middle">
+    <!-- rows 34 px apart from y=96; odd x=85, even x=145 -->
+    <circle cx="85" cy="96" r="11" fill="#c98b8b"/><text x="85" y="100">1</text>
+    <circle cx="145" cy="96" r="11" fill="#666"/><text x="145" y="100">2</text>
+    <circle cx="85" cy="130" r="11" fill="#666"/><text x="85" y="134">3</text>
+    <circle cx="145" cy="130" r="11" fill="#666"/><text x="145" y="134">4</text>
+    <circle cx="85" cy="164" r="11" fill="#666"/><text x="85" y="168">5</text>
+    <circle cx="145" cy="164" r="11" fill="#666"/><text x="145" y="168">6</text>
+    <circle cx="85" cy="198" r="11" fill="#c9b46b"/><text x="85" y="202" fill="#000">7</text>
+    <circle cx="145" cy="198" r="11" fill="#666"/><text x="145" y="202">8</text>
+    <circle cx="85" cy="232" r="11" fill="#777"/><text x="85" y="236">9</text>
+    <circle cx="145" cy="232" r="11" fill="#666"/><text x="145" y="236">10</text>
+    <circle cx="85" cy="266" r="11" fill="#2e86de" stroke="#fff" stroke-width="2"/><text x="85" y="270">11</text>
+    <circle cx="145" cy="266" r="11" fill="#666"/><text x="145" y="270">12</text>
+    <circle cx="85" cy="300" r="11" fill="#666"/><text x="85" y="304">13</text>
+    <circle cx="145" cy="300" r="11" fill="#111" stroke="#fff" stroke-width="2"/><text x="145" y="304">14</text>
+    <circle cx="85" cy="334" r="11" fill="#666"/><text x="85" y="338">15</text>
+    <circle cx="145" cy="334" r="11" fill="#666"/><text x="145" y="338">16</text>
+    <circle cx="85" cy="368" r="11" fill="#e03a3a" stroke="#fff" stroke-width="2"/><text x="85" y="372">17</text>
+    <circle cx="145" cy="368" r="11" fill="#666"/><text x="145" y="372">18</text>
+  </g>
+  <rect x="73" y="84" width="24" height="24" fill="none" stroke="#fff" stroke-width="1.5"/>
+  <text x="30" y="92" text-anchor="end" font-size="11" fill="#555">pin 1</text>
+  <text x="30" y="105" text-anchor="end" font-size="11" fill="#555">(square)</text>
+
+  <!-- already used -->
+  <text x="205" y="100" fill="#a05a5a">1, 7, 9 = water probe (already wired, leave it)</text>
+
+  <!-- new pins -->
+  <text x="205" y="255" fill="#2e86de" font-weight="bold">11 = GPIO17 → DHT11 DATA</text>
+  <text x="205" y="292" fill="#111" font-weight="bold">14 = GND → DHT11 GND (−)</text>
+  <text x="205" y="390" fill="#e03a3a" font-weight="bold">17 = 3.3 V → DHT11 VCC (+)</text>
+
+  <!-- module -->
+  <rect x="560" y="200" width="120" height="110" rx="8" fill="#2f6fb5"/>
+  <rect x="580" y="214" width="80" height="60" rx="4" fill="#eaf2fb"/>
+  <g stroke="#9db8d6" stroke-width="2">
+    <line x1="590" y1="226" x2="650" y2="226"/><line x1="590" y1="238" x2="650" y2="238"/><line x1="590" y1="250" x2="650" y2="250"/><line x1="590" y1="262" x2="650" y2="262"/>
+  </g>
+  <text x="620" y="296" text-anchor="middle" fill="#fff" font-weight="bold">DHT11 module</text>
+  <!-- module pins -->
+  <circle cx="530" cy="236" r="6" fill="#e03a3a"/><text x="545" y="240" font-size="12" fill="#fff">+</text>
+  <circle cx="530" cy="262" r="6" fill="#2e86de"/><text x="545" y="266" font-size="12" fill="#fff">S</text>
+  <circle cx="530" cy="288" r="6" fill="#111"/><text x="545" y="292" font-size="12" fill="#fff">−</text>
+  <line x1="536" y1="236" x2="560" y2="236" stroke="#ccc" stroke-width="3"/>
+  <line x1="536" y1="262" x2="560" y2="262" stroke="#ccc" stroke-width="3"/>
+  <line x1="536" y1="288" x2="560" y2="288" stroke="#ccc" stroke-width="3"/>
+
+  <!-- wires -->
+  <path d="M97 368 L 440 368 C 500 368, 480 236, 524 236" stroke="#e03a3a" stroke-width="4" fill="none"/>
+  <path d="M97 266 C 300 266, 420 262, 524 262" stroke="#2e86de" stroke-width="4" fill="none"/>
+  <path d="M157 300 C 320 300, 420 288, 524 288" stroke="#111" stroke-width="4" fill="none"/>
+  <text x="470" y="200" fill="#555" font-size="12" text-anchor="middle">labels vary: + / VCC,</text>
+  <text x="470" y="215" fill="#555" font-size="12" text-anchor="middle">S / OUT / DAT, − / GND</text>
+
+  <!-- notes -->
+  <rect x="20" y="420" width="740" height="126" rx="8" fill="#f4f6f8"/>
+  <text x="34" y="443" fill="#222">• Shut the Pi down (sudo poweroff) and unplug it before wiring.</text>
+  <text x="34" y="464" fill="#222">• Go by the labels printed on your module, not by pin order: modules put + / S / − in different orders.</text>
+  <text x="34" y="485" fill="#222">• 3-pin module (on a small board): no resistor needed, it has one built in.</text>
+  <text x="34" y="506" fill="#222">• Bare 4-pin blue sensor (grille facing you, pins down, left to right): 1 VCC, 2 DATA, 3 unused, 4 GND,</text>
+  <text x="48" y="524" fill="#222">plus a 10 kΩ resistor between VCC and DATA.</text>
+  <text x="34" y="542" fill="#666" font-size="12">Keep it in the air near the tank, not over the water surface (splashes and condensation kill DHT11s). Never use pins 2 / 4 (5 V).</text>
+</svg>

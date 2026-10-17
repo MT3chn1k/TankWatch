@@ -1,0 +1,20 @@
+# TankWatch sensor node. Copy .env.example to .env and config.example.yaml to config.yaml, edit both,
+# uncomment the hardware lines for the sensors you have, then: docker compose up -d --build
+services:
+  node:
+    build: .
+    image: tankwatch-node
+    container_name: tankwatch-node
+    restart: unless-stopped
+    env_file: .env
+    hostname: ${TANKWATCH_NODE:-tankwatch-node}
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - /:/host:ro                         # node_health reports the host's disk use
+      # - /sys/bus/w1:/sys/bus/w1:ro       # ds18b20: 1-Wire probes (enable dtoverlay=w1-gpio first)
+    # dht: GPIO access. Docker won't start if a listed device is missing, so keep only the one your Pi has:
+    # devices:
+    #   - /dev/gpiomem                     # Pi 3 / Pi 4
+    #   - /dev/gpiochip0                   # Pi 5 (gpiochip4 on kernels before 6.6.45)
+    # group_add:
+    #   - "${GPIO_GID:-997}"               # host gpio group: getent group gpio | cut -d: -f3
