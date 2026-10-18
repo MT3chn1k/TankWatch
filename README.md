@@ -41,6 +41,11 @@ with a water change around 17:00, and three collectors plus one that has gone si
 A dashboard only helps if you look at it. TankWatch drives an inexpensive LED matrix sign (Pimoroni Galactic
 Unicorn) that sits on a shelf and shows every collector's state by colour:
 
+![The status sign showing 65%RH in the middle, with four status blocks on the right edge: green, green, red, green](docs/images/status-sign.jpg)
+
+*The real sign. The third collector has gone silent, so its block is red, and the humidity shown is that
+collector's last reading, drawn in grey because it's stale. The camera washes the grey out to white.*
+
 | Colour | Meaning |
 |---|---|
 | 🟢 Green | The collector is reporting normally |

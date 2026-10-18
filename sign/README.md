@@ -3,6 +3,11 @@
 A Pimoroni **Galactic Unicorn** (53×11 LED matrix with a Raspberry Pi Pico 2 W) that sits on a shelf and
 tells you, without opening anything, whether every collector is alive and what your readings are.
 
+![The status sign showing 65%RH in the middle, with four status blocks on the right edge: green, green, red, green](../docs/images/status-sign.jpg)
+
+*The real sign. The third collector has gone silent, so its block is red, and the humidity shown is that
+collector's last reading, drawn in grey because it's stale. The camera washes the grey out to white.*
+
 ## What it shows
 
 **Right edge: one status block per collector** (up to four, top to bottom in `config.json` order):
