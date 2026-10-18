@@ -61,6 +61,15 @@ This matters most for the failure people don't think about. When a sensor box di
 you've stopped watching it. Without the sign, you find out days later from a gap in a graph. With it, you
 find out the next time you walk past.
 
+![The standard readout: WATER 76.1F in green over an amber one-hour trend, all four status blocks green](docs/images/sign-water-all-green.jpg)
+
+*All well: water temperature over its one-hour trend, every collector green.*
+
+![A Road Rash pit board card reading N1 UP 100% in green over CPU 128F in white](docs/images/sign-roadrash-card.jpg)
+
+*Press C for a Road Rash race against your collectors. Each one you pass gets a pit-board card with its
+uptime and CPU temperature. (These two screens were put up with sample values for the photos.)*
+
 Setup, buttons and the styles it can show (including a Road Rash race against your collectors) are in
 [sign/README.md](sign/README.md). Which collectors and readings it shows is one small `config.json`.
 

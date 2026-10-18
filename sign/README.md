@@ -23,10 +23,18 @@ If the hub itself stops answering, its block goes red and the sign checks the ot
 (does the Pi answer on port 22?). That way a dead hub can't make the collectors look healthy, or make all of
 them look dead.
 
+![The standard readout: WATER 76.1F in green over an amber one-hour trend, all four status blocks green](../docs/images/sign-water-all-green.jpg)
+
+*The standard WATER readout with its one-hour trend and four green status blocks. Sample values, staged for the photo.*
+
 **Main area: rotating readouts** with a faint one-hour trend graph behind each one:
 AIR temperature, WATER temperature, humidity, and a scrolling 24-hour uptime per collector. Colours follow
 `air_range_f` / `water_range_f`: blue below, green inside, orange above. A reading older than 15 minutes
 turns grey and blinks its age.
+
+![A Road Rash pit board card reading N1 UP 100% in green over CPU 128F in white](../docs/images/sign-roadrash-card.jpg)
+
+*The Road Rash style (button C): a pit-board card for a collector you've just passed. Sample values, staged for the photo.*
 
 **Buttons**
 
