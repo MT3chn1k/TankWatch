@@ -4,7 +4,7 @@ On Raspberry Pi OS / Debian 12 or newer:
 
 ```sh
 sudo apt install -y python3-venv libgpiod2 git
-sudo git clone https://github.com/<you>/tankwatch.git /opt/tankwatch
+sudo git clone https://github.com/MT3chn1k/tankwatch.git /opt/tankwatch
 sudo chown -R pi: /opt/tankwatch
 python3 -m venv /opt/tankwatch/venv
 /opt/tankwatch/venv/bin/pip install -r /opt/tankwatch/node/requirements.txt

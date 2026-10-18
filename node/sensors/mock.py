@@ -11,5 +11,7 @@ class Sensor:
 
     def read(self):
         c = round(self.base_c + 1.5 * math.sin(time.time() / 600) + random.uniform(-0.2, 0.2), 2)
-        return [(self.measurement, {"sensor": "mock"},
-                 {"temp_c": c, "temp_f": c_to_f(c), "humidity": round(random.uniform(45, 60), 1)})]
+        fields = {"temp_c": c, "temp_f": c_to_f(c)}
+        if self.measurement == "air":  # only air sensors report humidity
+            fields["humidity"] = round(random.uniform(45, 60), 1)
+        return [(self.measurement, {"sensor": "mock"}, fields)]

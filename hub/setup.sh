@@ -14,7 +14,7 @@ put INFLUX_ADMIN_PASSWORD "$(rand 24)"
 put INFLUX_ADMIN_TOKEN "$(rand 48)"
 put GRAFANA_ADMIN_PASSWORD "$(rand 16)"
 
-docker compose up -d influxdb
+docker compose up -d --quiet-pull influxdb
 printf "waiting for InfluxDB"
 until [ "$(docker inspect -f '{{.State.Health.Status}}' tankwatch-influxdb)" = healthy ]; do printf .; sleep 3; done
 echo
@@ -29,7 +29,7 @@ token_for() { # token_for DESCRIPTION FLAG: create a token scoped to the sensors
 [ -n "$(get INFLUX_READ_TOKEN)" ] || put INFLUX_READ_TOKEN "$(token_for tankwatch-grafana-read --read-bucket)"
 [ -n "$(get NODE_WRITE_TOKEN)" ] || put NODE_WRITE_TOKEN "$(token_for tankwatch-node-write --write-bucket)"
 
-docker compose up -d
+docker compose up -d --quiet-pull
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 cat <<MSG
 

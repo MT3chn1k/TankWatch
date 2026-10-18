@@ -67,13 +67,33 @@ class Hub:
         log.debug("sent %d lines", len(batch))
 
 
-def load_sensor(spec):
-    kind = spec["type"]
+RETRY_INIT_S = 300
+
+
+def check_type(kind):
+    """A sensor type with no file in sensors/ is a typo in config.yaml: stop with a clear message."""
+    if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "sensors", kind + ".py")):
+        known = sorted(f[:-3] for f in os.listdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), "sensors"))
+                       if f.endswith(".py") and not f.startswith("_"))
+        raise SystemExit("unknown sensor type '%s' in config.yaml; known types: %s" % (kind, ", ".join(known)))
+
+
+def start_sensor(job):
+    """Set up a sensor's hardware. If it fails (not wired, wrong pin, no access to GPIO), log why and try again
+    in RETRY_INIT_S; the node's other sensors keep running meanwhile."""
     try:
-        mod = importlib.import_module("sensors." + kind)
-    except ImportError as e:
-        raise SystemExit("sensor type '%s' could not be loaded: %s" % (kind, e))
-    return mod.Sensor(spec.get("options") or {})
+        mod = importlib.import_module("sensors." + job["type"])
+        job["sensor"] = mod.Sensor(job["options"])
+        if job.get("failed"):
+            log.info("%s: started after earlier failures", job["name"])
+        job["failed"] = False
+    except Exception as e:
+        job["sensor"] = None
+        job["retry_at"] = time.time() + RETRY_INIT_S
+        job["failed"] = True
+        log.error("%s (%s): could not start: %s: %s. Check its wiring and the options/pin in config.yaml, and "
+                  "that docker-compose.yml gives the container this hardware. Retrying in %d min.",
+                  job["name"], job["type"], type(e).__name__, e, RETRY_INIT_S // 60)
 
 
 def main():
@@ -93,12 +113,15 @@ def main():
     jobs = []
     for i, spec in enumerate(cfg.get("sensors") or []):
         name = spec.get("name") or "%s-%d" % (spec["type"], i)
+        check_type(spec["type"])
         tags = {"node": node, "location": spec.get("location", ""), **(spec.get("tags") or {})}
-        jobs.append({"name": name, "sensor": load_sensor(spec), "tags": tags,
-                     "every": int(spec.get("interval_s", 60)), "due": 0.0})
+        jobs.append({"name": name, "type": spec["type"], "options": spec.get("options") or {}, "tags": tags,
+                     "every": int(spec.get("interval_s", 60)), "due": 0.0, "sensor": None})
         log.info("sensor %s (%s) every %ss, location=%s", name, spec["type"], jobs[-1]["every"], tags["location"] or "-")
     if not jobs:
         raise SystemExit("no sensors in %s" % path)
+    for j in jobs:
+        start_sensor(j)
 
     while True:
         now = time.time()
@@ -107,6 +130,11 @@ def main():
             if now < j["due"]:
                 continue
             j["due"] = now + j["every"]
+            if j["sensor"] is None:
+                if now >= j["retry_at"]:
+                    start_sensor(j)
+                if j["sensor"] is None:
+                    continue
             try:
                 readings = j["sensor"].read()
             except Exception as e:

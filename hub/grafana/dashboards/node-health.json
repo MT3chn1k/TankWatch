@@ -15,7 +15,7 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Reporting (last 10 min)",
+      "title": "Reporting now (silent 90 s = DOWN)",
       "datasource": {
         "type": "influxdb",
         "uid": "tankwatch-influx"
@@ -33,7 +33,7 @@
             "type": "influxdb",
             "uid": "tankwatch-influx"
           },
-          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -10m, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_health\" and contains(value: r.node, set: ${node:json}))\n  |> filter(fn: (r) => r._field == \"load1\")\n  |> count()\n  |> map(fn: (r) => ({_time: now(), _value: if r._value > 0 then 1 else 0, _field: r.node}))\n  |> group(columns: [\"_field\"])\n"
+          "query": "from(bucket: v.defaultBucket)\n  |> range(start: -24h, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"node_health\" and contains(value: r.node, set: ${node:json}))\n  |> filter(fn: (r) => r._field == \"load1\")\n  |> last()\n  |> map(fn: (r) => ({_time: r._time, _field: r.node,\n      _value: if uint(v: now()) - uint(v: r._time) <= uint(v: 90s) then 1 else 0}))\n  |> group(columns: [\"_field\"])\n"
         }
       ],
       "fieldConfig": {
@@ -43,23 +43,24 @@
               "type": "value",
               "options": {
                 "1": {
-                  "text": "UP",
-                  "color": "green"
+                  "text": "UP"
+                },
+                "0": {
+                  "text": "DOWN"
                 }
               }
             }
           ],
-          "noValue": "DOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
               },
               {
-                "color": "red",
-                "value": 2
+                "color": "green",
+                "value": 1
               }
             ]
           }
@@ -221,7 +222,7 @@
         "x": 0,
         "y": 5,
         "w": 12,
-        "h": 9
+        "h": 11
       },
       "targets": [
         {
@@ -271,7 +272,7 @@
         "x": 12,
         "y": 5,
         "w": 12,
-        "h": 9
+        "h": 11
       },
       "targets": [
         {
@@ -318,9 +319,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 16,
         "w": 12,
-        "h": 8
+        "h": 11
       },
       "targets": [
         {
@@ -368,9 +369,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 14,
+        "y": 16,
         "w": 12,
-        "h": 8
+        "h": 11
       },
       "targets": [
         {
@@ -418,9 +419,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 27,
         "w": 24,
-        "h": 7
+        "h": 9
       },
       "targets": [
         {
@@ -447,10 +448,11 @@
           "displayMode": "table",
           "placement": "bottom",
           "calcs": [
-            "last",
-            "min",
-            "max"
-          ]
+            "max",
+            "last"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi"

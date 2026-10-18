@@ -81,26 +81,33 @@ def health_dashboard():
     red_at = lambda v: {"mode": "absolute", "steps": [{"color": "green", "value": None}, {"color": "red", "value": v}]}
     temp_field = "${unit}"
     panels = [
-        panel("stat", "Reporting (last 10 min)", 0, 0, 8, 5,
-              base.replace("v.timeRangeStart", "-10m") + '  |> filter(fn: (r) => r._field == "load1")\n  |> count()\n'
-              + '  |> map(fn: (r) => ({_time: now(), _value: if r._value > 0 then 1 else 0, _field: r.node}))\n  |> group(columns: ["_field"])\n',
-              fieldConfig={"defaults": {"mappings": [{"type": "value", "options": {"1": {"text": "UP", "color": "green"}}}],
-                                        "noValue": "DOWN", "thresholds": red_at(2)}, "overrides": []}),
+        # Same rule as the status sign: DOWN when a collector hasn't reported for 90 s. Looks back 24 h so a
+        # collector that has died stays on the board as DOWN instead of dropping off it.
+        panel("stat", "Reporting now (silent 90 s = DOWN)", 0, 0, 8, 5,
+              base.replace("v.timeRangeStart", "-24h") + '  |> filter(fn: (r) => r._field == "load1")\n  |> last()\n'
+              + '  |> map(fn: (r) => ({_time: r._time, _field: r.node,\n'
+              + '      _value: if uint(v: now()) - uint(v: r._time) <= uint(v: 90s) then 1 else 0}))\n  |> group(columns: ["_field"])\n',
+              fieldConfig={"defaults": {"mappings": [{"type": "value", "options": {"1": {"text": "UP"}, "0": {"text": "DOWN"}}}],
+                                        "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": None},
+                                                                                     {"color": "green", "value": 1}]}},
+                           "overrides": []}),
         panel("stat", "Undervolt now", 8, 0, 8, 5, latest("undervolt_now", "max"),
               fieldConfig={"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "OK"}, "1": {"text": "UNDERVOLT"}}}],
                                         "thresholds": red_at(1)}, "overrides": []}),
         panel("stat", "Throttled now", 16, 0, 8, 5, latest("throttled_now", "max"),
               fieldConfig={"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "OK"}, "1": {"text": "THROTTLED"}}}],
                                         "thresholds": red_at(1)}, "overrides": []}),
-        panel("timeseries", "CPU temperature", 0, 5, 12, 9, series(temp_field), unit="suffix:°"),
-        panel("timeseries", "Load (1 min)", 12, 5, 12, 9, series("load1")),
-        panel("timeseries", "Memory used", 0, 14, 12, 8, series("mem_used_pct"), unit="percent"),
-        panel("timeseries", "Disk used", 12, 14, 12, 8, series("disk_used_pct", "last"), unit="percent"),
-        panel("timeseries", "Undervolt / throttle events", 0, 22, 24, 7,
+        panel("timeseries", "CPU temperature", 0, 5, 12, 11, series(temp_field), unit="suffix:°"),
+        panel("timeseries", "Load (1 min)", 12, 5, 12, 11, series("load1")),
+        panel("timeseries", "Memory used", 0, 16, 12, 11, series("mem_used_pct"), unit="percent"),
+        panel("timeseries", "Disk used", 12, 16, 12, 11, series("disk_used_pct", "last"), unit="percent"),
+        panel("timeseries", "Undervolt / throttle events", 0, 27, 24, 9,
               base + '  |> filter(fn: (r) => r._field == "undervolt_now" or r._field == "throttled_now")\n'
               + '  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)\n'
               + '  |> map(fn: (r) => ({_time: r._time, _value: r._value, _field: r.node + " " + r._field}))\n  |> group(columns: ["_field"])\n'),
     ]
+    # collectors that had events sort to the top of the legend, so they're never the ones cut off
+    panels[-1]["options"]["legend"].update({"calcs": ["max", "last"], "sortBy": "Max", "sortDesc": True})
     return {"uid": "tankwatch-health", "title": "TankWatch – Node health", "tags": ["tankwatch"], "timezone": "browser",
             "refresh": "30s", "time": {"from": "now-24h", "to": "now"}, "schemaVersion": 39, "panels": panels,
             "templating": {"list": [tag_var("node", "node", "Node", "node_health"), UNIT_VAR]}}
