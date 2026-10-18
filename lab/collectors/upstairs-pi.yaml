@@ -1,0 +1,4 @@
+sensors:
+  - {type: node_health, interval_s: 30}
+  - {type: synthetic, location: 75-gallon, interval_s: 30, options: {profile: tank, base_c: 24.6, phase_h: 2}}
+  - {type: synthetic, location: fiddle-leaf-fig, interval_s: 60, options: {profile: plant}}

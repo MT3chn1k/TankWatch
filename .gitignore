@@ -10,3 +10,9 @@ __pycache__/
 venv/
 sign/config.json
 hub/backups/
+hub/beacon/
+node/tankwatch.yaml
+node/docker-compose.override.yml
+lab/run/
+lab/.env
+display/.env

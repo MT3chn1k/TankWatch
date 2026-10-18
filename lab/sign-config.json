@@ -1,0 +1,15 @@
+{
+  "_comment": "Lab sign: hub_url, org and bucket come from the display join code.",
+  "hub_url": "http://set-by-join-code:8086",
+  "nodes": [
+    {"name": "livingroom-pi", "label": "LR", "icon": "fish"},
+    {"name": "upstairs-pi", "label": "UP", "icon": "fish"},
+    {"name": "kitchen-pi", "label": "KIT"},
+    {"name": "hub-pi", "label": "HUB", "hub": true}
+  ],
+  "air_location": "living-room",
+  "water_location": "75-gallon",
+  "air_range_f": [68, 80],
+  "water_range_f": [74, 82],
+  "hot_cpu_c": 77
+}

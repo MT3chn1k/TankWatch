@@ -1,0 +1,19 @@
+# TankWatch display on a Raspberry Pi with a Unicorn HAT Mini. Put the hub's DISPLAY join code in .env:
+#   TANKWATCH_JOIN=tw1....
+# then: docker compose up -d --build      (switch SPI on first: sudo raspi-config nonint do_spi 0)
+services:
+  display:
+    build:
+      context: ..
+      dockerfile: display/Dockerfile
+      args: {HAT: "1"}
+    image: tankwatch-display-hat
+    container_name: tankwatch-display
+    restart: unless-stopped
+    network_mode: host                     # discovery scans your home network
+    env_file: .env
+    environment: {PANEL: hatmini}
+    devices:
+      - /dev/spidev0.0                     # the HAT's LED drivers
+      - /dev/spidev0.1
+      - /dev/gpiomem                       # its buttons (Pi 3 / Pi 4)

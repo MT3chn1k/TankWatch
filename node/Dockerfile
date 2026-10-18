@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgpiod2 && rm
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY tankwatch_node.py .
+COPY tankwatch_node.py discovery.py ./
 COPY sensors ./sensors
-ENV TANKWATCH_CONFIG=/config/config.yaml PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1
 CMD ["python", "tankwatch_node.py"]

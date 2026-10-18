@@ -17,8 +17,11 @@ of dollars for, on hardware you already own, with no subscription and no cloud a
  └──────────────────────┘                     └──────────────────────────────┘
 ```
 
-- **Everything runs in Docker.** One command sets up the hub; one command starts each sensor node.
-- **Sensors are plug-ins.** Each node lists its sensors in a short `config.yaml`. Adding a new kind of
+- **Everything runs in Docker.** One command sets up the hub; a short wizard sets up each sensor Pi.
+- **Pis find their own way home.** Paste one join code on a new Pi and it finds the hub, detects its sensors and
+  starts. If the hub's address ever changes, every device finds it again by itself.
+  See [docs/setup-and-discovery.md](docs/setup-and-discovery.md).
+- **Sensors are plug-ins.** Each collector lists its sensors in one `tankwatch.yaml`. Adding a new kind of
   sensor is one small Python file; see [docs/adding-a-sensor.md](docs/adding-a-sensor.md).
 - **Built for reliability.** Nodes keep readings in memory while the hub is unreachable and send them when it
   comes back. Every node also reports its own health (CPU temperature, Raspberry Pi undervolt and throttle
@@ -83,8 +86,10 @@ Setup, buttons and the styles it can show (including a Road Rash race against yo
 | DHT11 or DHT22 | Air temperature and humidity | $2–10 |
 | Jumper wires, a reliable power supply per Pi | | |
 | Pimoroni Galactic Unicorn (Pico 2 W version) | The status sign (optional) | |
+| Pimoroni Unicorn HAT Mini on any Pi | A small display (optional) | |
 
-One Pi can be both the hub and a collector.
+One Pi can be both the hub and a collector. No hardware yet? The [test lab](docs/test-lab.md) runs a complete
+install on one computer with synthetic sensors.
 
 ## Quick start
 
@@ -105,29 +110,34 @@ cd tankwatch/hub
 ./setup.sh
 ```
 
-`setup.sh` creates random passwords and tokens in `hub/.env`, starts InfluxDB and Grafana, and prints the
-lines each collector needs. Open Grafana at `http://<hub-ip>:3000` with the user and password it printed.
+`setup.sh` creates random passwords and tokens in `hub/.env`, starts InfluxDB, Grafana and the discovery beacon,
+checks other devices can reach them, and prints two **join codes**: one for collectors, one for displays.
+Open the dashboards at `http://<hub-ip>:3000` with the user and password it printed.
 
-### 2. A collector (sensor node)
+### 2. A collector (each sensor Pi)
 
 ```sh
 git clone https://github.com/MT3chn1k/tankwatch.git
 cd tankwatch/node
-cp .env.example .env                 # paste the lines setup.sh printed, and name this collector
-cp config.example.yaml config.yaml   # list this collector's sensors and where they are
-nano docker-compose.yml              # uncomment the hardware lines for your sensors
-docker compose up -d --build
-docker logs -f tankwatch-node        # watch the readings go out
+./setup.sh
 ```
 
-- **No sensors wired yet?** Use `type: mock` in `config.yaml` to send fake readings and see the dashboards work.
+Paste the collector join code when it asks. The wizard finds the hub, detects your DS18B20 probes, asks about
+a DHT sensor and where each sensor is, tests every sensor once, and starts the collector.
+
+- **No sensors wired yet?** Add `type: synthetic` to `tankwatch.yaml` for realistic made-up readings.
 - **A sensor that isn't wired or answering doesn't stop the others.** The log says "could not start" and what to
   check, and the collector retries it every 5 minutes.
-- **Using the status sign?** The collector's name (`TANKWATCH_NODE` in `.env`) is what you list in the sign's
-  `config.json`.
+- **Re-run `./setup.sh` any time** (a new probe, a moved sensor). It keeps your hub settings and offers your
+  previous answers as defaults.
 - **Prefer no Docker on the collector?** See [docs/install-node.md](docs/install-node.md).
 
-### 3. Keep it running
+### 3. Displays (optional)
+
+The status sign and Unicorn HAT Mini displays use the display join code: see [display/README.md](display/README.md)
+and [sign/README.md](sign/README.md).
+
+### 4. Keep it running
 
 `hub/backup.sh` backs up every reading and dashboard, and `hub/restore.sh` puts them back. Backups,
 upgrades, security and troubleshooting are in [docs/operating-the-hub.md](docs/operating-the-hub.md).
@@ -139,10 +149,12 @@ upgrades, security and troubleshooting are in [docs/operating-the-hub.md](docs/o
 | `ds18b20` | Water / liquid temperature | DS18B20 waterproof probe + 4.7 kΩ resistor | Several probes can share one pin. [Wiring](docs/wiring/ds18b20-wiring.svg) |
 | `dht` | Air temperature + humidity | DHT11 or DHT22 | [Wiring](docs/wiring/dht11-wiring.svg) |
 | `node_health` | The Pi itself | none | CPU temp, undervolt/throttle, voltages, load, memory, disk |
-| `mock` | Fake data | none | For testing |
+| `synthetic` | Realistic made-up data: a tank, a room, a plant, a feeder | none | For demos and the test lab |
+| `mock` | Simple fake data | none | For testing |
 
-Planned: pH and conductivity/TDS (Atlas Scientific EZO), soil moisture for plants, distance sensors for
-feeder and reservoir levels, water-leak detection. Adding one: [docs/adding-a-sensor.md](docs/adding-a-sensor.md).
+Planned: pH and conductivity/TDS (Atlas Scientific EZO), soil moisture sensors for plants, distance sensors for
+feeder and reservoir levels, water-leak detection. (The dashboards already chart soil moisture and levels: any
+reading named `..._pct` appears in the "Plants, feeders and levels" panel.) Adding one: [docs/adding-a-sensor.md](docs/adding-a-sensor.md).
 To build your own panels and alerts, see [docs/data-model.md](docs/data-model.md) for what's stored and example
 queries.
 
@@ -154,7 +166,10 @@ aquariums, with the status sign on a shelf. The packaged version here is new. Wh
 | Part | Tested on |
 |---|---|
 | Hub setup, dashboards, backup and restore | Docker on a PC, from a fresh clone |
-| Collector agent in Docker | Docker on a PC, with the `mock` and `node_health` sensors |
+| Join codes, discovery, a collector finding a moved hub | The [test lab](docs/test-lab.md): 15 of 15 checks pass |
+| Collector setup wizard | A Debian container on the lab network, with fake DS18B20 probes; re-runs keep the config unchanged |
+| Collector agent in Docker | Docker on a PC, with the `synthetic`, `mock` and `node_health` sensors |
+| Unicorn HAT Mini display | Its web version in the test lab. The real HAT: next, on a Raspberry Pi 4 |
 | `ds18b20` and `node_health` sensor code | A Raspberry Pi 3B+ with a real probe |
 | `dht` sensor code | The same logic runs the home setup's DHT11s, but not yet from inside the Docker container |
 | Status sign | This version: its screens and shows on a PC simulator against a real hub. The original, home-specific version it came from runs the real sign every day |
@@ -166,6 +181,9 @@ If you try a combination that isn't in this list, please open an issue with what
 
 - [x] Containerized hub and sensor node, plug-in sensors, store-and-forward, node health
 - [x] **Status sign** (Pimoroni Galactic Unicorn): green / amber / red per collector, red when one goes silent
+- [x] Join codes, hub discovery and a collector setup wizard
+- [x] Test lab: a whole install in Docker with synthetic sensors and virtual displays
+- [x] Unicorn HAT Mini display (tested in its web version)
 - [ ] Alerts (Grafana alerting to email / phone) with sensible defaults per sensor
 - [ ] pH, TDS, soil moisture, level sensors
 - [ ] Network traffic mapping per node (NetFlow)

@@ -36,7 +36,7 @@ restore loses nothing new.
 
 Restoring onto a new machine: clone the repo, copy your old `hub/.env` and the backup folder into `hub/`,
 run `./setup.sh` once to start the containers, then `./restore.sh`. If the new machine has a different IP
-address, update `INFLUX_URL` in each collector's `.env` and `hub_url` in the sign's `config.json`.
+address, collectors and displays find it again by themselves within a few minutes; update `hub_url` in the sign's `config.json`.
 
 > Restoring by hand? After `docker compose cp` puts `grafana.db` back, the file belongs to root and Grafana
 > (user 472) can't write it. Grafana then restarts in a loop with "attempt to write a readonly database".
@@ -52,11 +52,11 @@ To upgrade, take a backup, edit the image tags, then:
 docker compose pull && docker compose up -d
 ```
 
-Collectors: `git pull`, then `docker compose up -d --build` in `node/`.
+Collectors and displays: `git pull`, then `docker compose up -d --build` in `node/` or `display/`.
 
 ## Security
 
-- **Keep the hub on your home network.** Don't forward ports 3000 or 8086 on your router. To check your
+- **Keep the hub on your home network.** Don't forward ports 3000, 8086 or 8087 on your router. To check your
   tanks from outside, use a VPN such as WireGuard or Tailscale.
 - `hub/.env` holds every password and token. It's ignored by git; keep it that way, with `chmod 600`
   (setup.sh does this).
@@ -68,14 +68,16 @@ Collectors: `git pull`, then `docker compose up -d --build` in `node/`.
 | Port | Service | Who connects |
 |---|---|---|
 | 3000 | Grafana | You, in a browser |
-| 8086 | InfluxDB | Collectors (write), the status sign (read), you (admin UI) |
+| 8086 | InfluxDB | Collectors (write), displays and the status sign (read), you (admin UI) |
+| 8087 | Discovery beacon | Collectors and displays finding the hub (serves only the hub's id and name) |
 
 ## When something's wrong
 
 | Symptom | Check |
 |---|---|
 | A collector's readings stopped | On that collector: `docker logs --tail 30 tankwatch-node`. "could not start" means a sensor isn't wired or the pin is wrong. The rest of that collector keeps running. "hub unreachable" means it can't reach the hub; it's buffering and will catch up. |
-| "hub rejected ... HTTP 401" in a collector's log | Its `INFLUX_TOKEN` is wrong or was deleted. Copy `NODE_WRITE_TOKEN` from `hub/.env`. |
+| "hub rejected ... HTTP 401" in a collector's log | Its token is wrong or was deleted. Run `./setup.sh` on the collector with a fresh join code from the hub (`./setup.sh codes`). |
+| "hub ... not found on the network" | The hub is off, or this device can't see it: guest Wi-Fi and some mesh networks isolate devices, and a firewall on the hub can block port 8087. See [setup-and-discovery.md](setup-and-discovery.md). |
 | DHT sensor: "could not start" | Is GPIO given to the container (`devices:` in `node/docker-compose.yml`)? Is the `pin:` right (`D17` = GPIO17 = physical pin 11)? |
 | DS18B20: "no probe found" | Is `dtoverlay=w1-gpio` in `/boot/firmware/config.txt` (then reboot)? Is the 4.7 kΩ resistor between data and 3.3 V? Is `/sys/bus/w1` mounted in `node/docker-compose.yml`? |
 | Grafana won't start after a restore | See the note under Restoring. |

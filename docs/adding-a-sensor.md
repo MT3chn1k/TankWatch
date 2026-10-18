@@ -1,6 +1,6 @@
 # Adding a sensor type
 
-A sensor is one Python file in `node/sensors/`. The file name is the `type:` you use in `config.yaml`.
+A sensor is one Python file in `node/sensors/`. The file name is the `type:` you use in `tankwatch.yaml`.
 
 ```python
 # node/sensors/soil.py
@@ -9,7 +9,7 @@ from . import c_to_f
 
 class Sensor:
     def __init__(self, options):
-        # options = the `options:` block from config.yaml for this sensor
+        # options = the `options:` block from tankwatch.yaml for this sensor
         self.channel = int(options.get("channel", 0))
 
     def read(self):
@@ -30,7 +30,7 @@ Rules that keep the dashboards working:
 - **Keep a field's type the same forever.** InfluxDB rejects a field that changes from number to text.
 - Add any new Python packages to `node/requirements.txt`.
 
-Then add it to `config.yaml`:
+Then add it to `tankwatch.yaml`:
 
 ```yaml
   - type: soil

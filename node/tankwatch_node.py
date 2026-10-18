@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
-"""TankWatch node agent: reads the sensors listed in config.yaml and sends them to the hub's InfluxDB.
+"""TankWatch collector: reads the sensors listed in tankwatch.yaml and sends them to the hub's InfluxDB.
 
 Each sensor runs on its own interval. Readings that can't be sent (hub down, network out) are kept in
 memory and sent with the next successful write, up to BUFFER_MAX lines, so a short outage loses nothing.
+If the hub stays unreachable for REDISCOVER_AFTER_S, the collector looks for the same hub (by its id) on the
+network, and if it has moved to a new address, switches to it and saves the new address in tankwatch.yaml.
+
+Config: tankwatch.yaml (written by setup.sh). The older layout, config.yaml plus INFLUX_* variables in .env,
+still works. A join code in TANKWATCH_JOIN (or `join:` in the file) fills in the hub on first start.
 """
-import importlib, logging, os, socket, sys, time, urllib.error, urllib.parse, urllib.request
+import importlib, logging, os, re, socket, sys, time, urllib.error, urllib.parse, urllib.request
 from collections import deque
 
 import yaml
+
+import discovery
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("tankwatch")
 
 BUFFER_MAX = 10000
+REDISCOVER_AFTER_S = int(os.environ.get("TANKWATCH_REDISCOVER_AFTER_S", 180))   # unreachable this long: look for the hub
+REDISCOVER_EVERY_S = int(os.environ.get("TANKWATCH_REDISCOVER_EVERY_S", 300))   # and don't search more often than this
 
 
 def esc_tag(v):
@@ -36,11 +45,38 @@ def line(measurement, tags, fields, ts):
 
 
 class Hub:
-    def __init__(self, url, org, bucket, token):
-        q = urllib.parse.urlencode({"org": org, "bucket": bucket, "precision": "s"})
-        self.endpoint = "%s/api/v2/write?%s" % (url.rstrip("/"), q)
-        self.token = token
+    def __init__(self, url, org, bucket, token, hub_id=None, config_path=None):
+        self.org, self.bucket, self.token, self.hub_id, self.config_path = org, bucket, token, hub_id, config_path
         self.pending = deque(maxlen=BUFFER_MAX)
+        self.failing_since = None
+        self.last_search = 0.0
+        self.set_url(url)
+
+    def set_url(self, url):
+        self.url = url.rstrip("/")
+        q = urllib.parse.urlencode({"org": self.org, "bucket": self.bucket, "precision": "s"})
+        self.endpoint = "%s/api/v2/write?%s" % (self.url, q)
+
+    def unreachable(self):
+        """Called after a failed send. After REDISCOVER_AFTER_S of failures, look for the hub elsewhere."""
+        now = time.time()
+        self.failing_since = self.failing_since or now
+        if not self.hub_id or now - self.failing_since < REDISCOVER_AFTER_S or now - self.last_search < REDISCOVER_EVERY_S:
+            return
+        self.last_search = now
+        log.info("hub at %s unreachable for %d s; looking for hub %s on the network", self.url,
+                 now - self.failing_since, self.hub_id)
+        hubs = discovery.find_hubs(hub_id=self.hub_id, hints=[discovery.host_of(self.url)])
+        if not hubs:
+            log.warning("hub %s not found on the network; will look again in %d min", self.hub_id, REDISCOVER_EVERY_S // 60)
+            return
+        if hubs[0]["url"] == self.url:
+            log.info("hub %s answers at its usual address again", self.hub_id)
+            return
+        old = self.url
+        self.set_url(hubs[0]["url"])
+        log.warning("hub %s moved: %s -> %s; switching", self.hub_id, old, self.url)
+        save_hub_url(self.config_path, old, self.url)
 
     def send(self, lines):
         self.pending.extend(lines)
@@ -62,9 +98,53 @@ class Hub:
             return
         except Exception as e:
             log.warning("hub unreachable (%s), keeping %d lines for retry", e, len(self.pending))
+            self.unreachable()
             return
+        if self.failing_since:
+            log.info("hub reachable again after %d s; sent %d buffered lines", time.time() - self.failing_since, len(batch))
+        self.failing_since = None
         self.pending.clear()
         log.debug("sent %d lines", len(batch))
+
+
+def save_hub_url(path, old, new):
+    """Record the hub's new address in the config file, changing only that one value so comments survive."""
+    if not path or not os.access(path, os.W_OK):
+        log.warning("can't save the new hub address (config file not writable); it will be found again after a restart")
+        return
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    # the url line may be quoted (setup.sh writes "http://...") or bare (hand-written)
+    updated = re.sub(r'(?m)^(\s*url:\s*)"?%s"?\s*$' % re.escape(old), lambda m: m.group(1) + '"%s"' % new, text, count=1)
+    if updated != text:
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(updated)
+        log.info("saved new hub address in %s", path)
+
+
+def load_config():
+    """tankwatch.yaml, or the older config.yaml (+ INFLUX_* env vars). Returns (config dict, path)."""
+    path = os.environ.get("TANKWATCH_CONFIG")
+    if not path:
+        path = next((p for p in ("/config/tankwatch.yaml", "tankwatch.yaml", "/config/config.yaml", "config.yaml")
+                     if os.path.exists(p)), "tankwatch.yaml")
+    with open(path, encoding="utf-8") as fh:
+        return yaml.safe_load(fh) or {}, path
+
+
+def hub_settings(cfg):
+    """Hub details from, in order of priority: INFLUX_* env vars, the config's hub: section, a join code."""
+    hub = dict(cfg.get("hub") or {})
+    code = os.environ.get("TANKWATCH_JOIN") or cfg.get("join")
+    if code and not hub.get("token"):
+        j = discovery.decode_join(code)
+        if j["role"] != "collector":
+            raise SystemExit("that join code is for a display (read-only); a collector needs the collector join code")
+        hub = {"id": j["id"], "url": j["url"], "org": j["org"], "bucket": j["bucket"], "token": j["token"]}
+    for key, env in (("url", "INFLUX_URL"), ("org", "INFLUX_ORG"), ("bucket", "INFLUX_BUCKET"), ("token", "INFLUX_TOKEN")):
+        if os.environ.get(env):
+            hub[key] = os.environ[env]
+    return hub
 
 
 RETRY_INIT_S = 300
@@ -96,19 +176,41 @@ def start_sensor(job):
                   job["name"], job["type"], type(e).__name__, e, RETRY_INIT_S // 60)
 
 
-def main():
-    path = os.environ.get("TANKWATCH_CONFIG", "config.yaml")
-    with open(path) as fh:
-        cfg = yaml.safe_load(fh) or {}
+def test_sensors(cfg):
+    """--test: read every configured sensor once and print what it says. Doesn't contact the hub."""
+    ok = True
+    for i, spec in enumerate(cfg.get("sensors") or []):
+        check_type(spec["type"])
+        name = spec.get("name") or "%s-%d" % (spec["type"], i)
+        try:
+            sensor = importlib.import_module("sensors." + spec["type"]).Sensor(spec.get("options") or {})
+            for measurement, tags, fields in sensor.read():
+                extra = " ".join("%s=%s" % kv for kv in tags.items() if kv[1])
+                print("OK    %-14s %-11s %s %s" % (name, measurement, " ".join("%s=%s" % kv for kv in fields.items()), extra))
+        except Exception as e:
+            ok = False
+            print("FAIL  %-14s %s: %s" % (name, type(e).__name__, e))
+    return ok
 
-    node = cfg.get("node") or os.environ.get("TANKWATCH_NODE") or socket.gethostname()
-    hub_cfg = cfg.get("hub") or {}
-    hub = Hub(os.environ.get("INFLUX_URL", hub_cfg.get("url", "")),
-              os.environ.get("INFLUX_ORG", hub_cfg.get("org", "tankwatch")),
-              os.environ.get("INFLUX_BUCKET", hub_cfg.get("bucket", "sensors")),
-              os.environ.get("INFLUX_TOKEN", ""))
-    if not hub.token or "://" not in hub.endpoint:
-        raise SystemExit("set INFLUX_URL and INFLUX_TOKEN (see .env.example)")
+
+def main():
+    cfg, path = load_config()
+    if "--test" in sys.argv:
+        sys.exit(0 if test_sensors(cfg) else 1)
+    node = os.environ.get("TANKWATCH_NODE") or cfg.get("node") or socket.gethostname()
+    h = hub_settings(cfg)
+    if not h.get("token"):
+        raise SystemExit("no hub settings: run setup.sh, or put a join code in TANKWATCH_JOIN")
+    if not h.get("url") and h.get("id"):
+        found = discovery.find_hubs(hub_id=h["id"])
+        if not found:
+            raise SystemExit("couldn't find the hub on the network; put its address in tankwatch.yaml (hub: url:)")
+        h["url"] = found[0]["url"]
+    hub = Hub(h.get("url", ""), h.get("org", "tankwatch"), h.get("bucket", "sensors"), h["token"],
+              hub_id=h.get("id"), config_path=path)
+    if "://" not in hub.endpoint:
+        raise SystemExit("the hub address in %s isn't a URL (expected something like http://192.168.1.10:8086)" % path)
+    log.info("collector %s sending to %s (hub %s)", node, hub.url, h.get("id") or "-")
 
     jobs = []
     for i, spec in enumerate(cfg.get("sensors") or []):

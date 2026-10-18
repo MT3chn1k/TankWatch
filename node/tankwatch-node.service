@@ -7,8 +7,8 @@ Wants=network-online.target
 [Service]
 User=pi
 WorkingDirectory=/opt/tankwatch/node
-EnvironmentFile=/opt/tankwatch/node/.env
-Environment=TANKWATCH_CONFIG=/opt/tankwatch/node/config.yaml
+EnvironmentFile=-/opt/tankwatch/node/.env
+Environment=TANKWATCH_CONFIG=/opt/tankwatch/node/tankwatch.yaml
 ExecStart=/opt/tankwatch/venv/bin/python tankwatch_node.py
 Restart=always
 RestartSec=15

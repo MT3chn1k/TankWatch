@@ -1,0 +1,32 @@
+# Example collector settings. You normally don't write this by hand: ./setup.sh asks a few questions and
+# writes tankwatch.yaml for you. This shows what it contains, for reference or scripted installs.
+
+node: "kitchen-pi"                 # name in dashboards and on the sign (default: the Pi's host name)
+
+hub:                               # from the hub's collector join code
+  id: "hub id"                     # which hub this is, so the collector only ever re-finds the same one
+  url: "http://192.168.1.10:8086"  # updated automatically if the hub moves to a new address
+  org: "tankwatch"
+  bucket: "sensors"
+  token: "write-only token"        # a password: keep this file private (setup.sh makes it readable only by you)
+
+# Instead of a hub: section, a join code works too (used once, on the first start):
+# join: "tw1.eyJ2IjoxLC..."
+
+sensors:
+  - type: node_health              # the Pi itself: CPU temperature, undervolt/throttle, load, memory, disk
+    interval_s: 30
+
+  - type: ds18b20                  # waterproof probe(s) on 1-Wire, GPIO4
+    location: 75-gallon
+    interval_s: 60
+    options: {only: [28-1f3bd446615d]}   # leave out "only" to read every probe here
+
+  - type: dht                      # air temperature + humidity
+    location: living-room
+    interval_s: 60
+    options: {model: dht22, pin: D17}
+
+  # - type: synthetic              # realistic made-up data, for demos and tests: see sensors/synthetic.py
+  #   location: demo-tank
+  #   options: {profile: tank}

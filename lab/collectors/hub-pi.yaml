@@ -1,0 +1,3 @@
+# The collector that runs on the hub machine itself: just its health, so the hub gets a status light.
+sensors:
+  - {type: node_health, interval_s: 30}

@@ -1,0 +1,4 @@
+sensors:
+  - {type: node_health, interval_s: 30}
+  - {type: synthetic, location: cichlid-tank, interval_s: 30, options: {profile: tank, base_c: 25.3}}
+  - {type: synthetic, location: living-room, interval_s: 30, options: {profile: room, base_c: 21.5}}

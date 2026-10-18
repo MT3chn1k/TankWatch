@@ -1,0 +1,5 @@
+# This collector is started with a WRONG hub address on purpose: it has to find the hub by itself.
+sensors:
+  - {type: node_health, interval_s: 30}
+  - {type: synthetic, location: cat-feeder, interval_s: 60, options: {profile: feeder}}
+  - {type: synthetic, location: kitchen, interval_s: 30, options: {profile: room, base_c: 20.5, phase_h: 1}}

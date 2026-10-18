@@ -54,6 +54,12 @@ def sensors_dashboard():
     win = '  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n'
     temp = BASE + '  |> filter(fn: (r) => r._measurement != "node_health" and r._field == "${unit}")\n' + sel + win + label
     hum = BASE + '  |> filter(fn: (r) => r._field == "humidity")\n' + sel + win + label
+    # series named like "fiddle-leaf-fig moisture" or "cat-feeder level": location + field without its _pct
+    pct = ('import "strings"\n' + BASE
+           + '  |> filter(fn: (r) => r._measurement != "node_health" and r._field =~ /_pct$/)\n' + sel + win
+           + '  |> map(fn: (r) => ({_time: r._time, _value: r._value,\n'
+           + '      _field: r.location + " " + strings.trimSuffix(v: r._field, suffix: "_pct")}))\n'
+           + '  |> group(columns: ["_field"])\n')
     latest = (BASE.replace("v.timeRangeStart", "-1h") + '  |> filter(fn: (r) => r._measurement != "node_health" and r._field == "${unit}")\n'
               + sel + '  |> last()\n' + label)
     panels = [
@@ -61,6 +67,9 @@ def sensors_dashboard():
               "color": {"mode": "fixed", "fixedColor": "blue"}}, "overrides": []}),
         panel("timeseries", "Temperature", 0, 5, 24, 10, temp, unit="suffix:°"),
         panel("timeseries", "Humidity", 0, 15, 24, 8, hum, unit="percent"),
+        # Any reading whose field ends in _pct: soil moisture, feeder and reservoir levels, and whatever comes next
+        panel("timeseries", "Plants, feeders and levels", 0, 23, 24, 9, pct,
+              unit="percent", fieldConfig={"defaults": {"unit": "percent", "min": 0, "max": 100}, "overrides": []}),
     ]
     return {"uid": "tankwatch-sensors", "title": "TankWatch – Sensors", "tags": ["tankwatch"], "timezone": "browser",
             "refresh": "1m", "time": {"from": "now-24h", "to": "now"}, "schemaVersion": 39, "panels": panels,

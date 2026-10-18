@@ -1,0 +1,53 @@
+# TankWatch virtual test lab: four collectors with synthetic sensors and two displays, all joining the lab hub
+# through join codes and discovery, the way real Pis do. Start it with ./start.sh (which sets up the hub first).
+x-collector: &collector
+  build: ../node
+  image: tankwatch-node
+  restart: unless-stopped
+  networks: [hub]
+  volumes:
+    - /:/host:ro
+
+services:
+  hub-pi:
+    <<: *collector
+    environment: {TANKWATCH_JOIN: "${COLLECTOR_CODE}", TANKWATCH_NODE: hub-pi}
+    volumes: ["./collectors/hub-pi.yaml:/config/tankwatch.yaml:ro"]
+  livingroom-pi:
+    <<: *collector
+    environment: {TANKWATCH_JOIN: "${COLLECTOR_CODE}", TANKWATCH_NODE: livingroom-pi}
+    volumes: ["./collectors/livingroom-pi.yaml:/config/tankwatch.yaml:ro"]
+  upstairs-pi:
+    <<: *collector
+    environment: {TANKWATCH_JOIN: "${COLLECTOR_CODE}", TANKWATCH_NODE: upstairs-pi}
+    volumes: ["./collectors/upstairs-pi.yaml:/config/tankwatch.yaml:ro"]
+  kitchen-pi:                         # gets a join code pointing at an address where no hub is
+    <<: *collector
+    environment:
+      TANKWATCH_JOIN: "${STALE_COLLECTOR_CODE}"
+      TANKWATCH_NODE: kitchen-pi
+      TANKWATCH_REDISCOVER_AFTER_S: "30"
+      TANKWATCH_REDISCOVER_EVERY_S: "60"
+    volumes: ["./collectors/kitchen-pi.yaml:/config/tankwatch.yaml:ro"]
+
+  display-mini:                       # virtual Unicorn HAT Mini: http://localhost:8090
+    build: {context: .., dockerfile: display/Dockerfile}
+    image: tankwatch-display
+    restart: unless-stopped
+    networks: [hub]
+    ports: ["8090:8090"]
+    environment: {TANKWATCH_JOIN: "${DISPLAY_CODE}", PANEL: web}
+  display-sign:                       # the real sign code on a virtual Galactic Unicorn: http://localhost:8091
+    image: tankwatch-display
+    restart: unless-stopped
+    networks: [hub]
+    ports: ["8091:8091"]
+    depends_on: [display-mini]        # same image; build it once
+    environment: {TANKWATCH_JOIN: "${DISPLAY_CODE}", SIGN_CONFIG: /lab/sign-config.json}
+    volumes: ["./sign-config.json:/lab/sign-config.json:ro"]
+    command: ["python", "sign/tools/virtual_sign.py"]
+
+networks:
+  hub:
+    external: true
+    name: tw-lab-hub_default          # the lab hub's own network, created by start.sh

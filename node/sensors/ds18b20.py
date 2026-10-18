@@ -4,6 +4,8 @@ tagged with its serial number. Needs `dtoverlay=w1-gpio` in /boot/firmware/confi
 options:
   measurement: water     (default water)
   names: {28-1f3b...: left-tank}   optional friendly name per probe serial, stored as tag `probe_name`
+  only: [28-1f3b...]               optional: read only these probes (to put probes in different locations,
+                                   list each probe in its own ds18b20 entry with its own location)
 """
 import glob, os
 
@@ -21,12 +23,13 @@ class Sensor:
     def __init__(self, options):
         self.measurement = options.get("measurement", "water")
         self.names = options.get("names") or {}
+        self.only = set(options.get("only") or [])
 
     def read(self):
         out = []
-        probes = sorted(glob.glob(os.path.join(W1, "28-*")))
+        probes = sorted(p for p in glob.glob(os.path.join(W1, "28-*")) if not self.only or os.path.basename(p) in self.only)
         if not probes:
-            raise RuntimeError("no DS18B20 probe found under %s" % W1)
+            raise RuntimeError("no DS18B20 probe found under %s%s" % (W1, " matching %s" % sorted(self.only) if self.only else ""))
         for p in probes:
             serial = os.path.basename(p)
             with open(os.path.join(p, "w1_slave")) as fh:

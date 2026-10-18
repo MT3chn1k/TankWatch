@@ -1,11 +1,10 @@
 # TankWatch hub: InfluxDB stores the readings, Grafana shows them.
-# First time: ./setup.sh  (creates .env with passwords and tokens, then starts everything)
+# First time: ./setup.sh  (creates .env with passwords and tokens, starts everything, prints join codes)
 services:
   influxdb:
     image: influxdb:2.7.11
-    container_name: tankwatch-influxdb
     restart: unless-stopped
-    ports: ["8086:8086"]
+    ports: ["8086:8086", "8087:8087"]   # 8087 is the discovery beacon, which shares this container's address
     volumes:
       - influxdb-data:/var/lib/influxdb2
       - influxdb-config:/etc/influxdb2
@@ -24,7 +23,6 @@ services:
 
   grafana:
     image: grafana/grafana-oss:11.6.0
-    container_name: tankwatch-grafana
     restart: unless-stopped
     ports: ["3000:3000"]
     depends_on:
@@ -40,6 +38,16 @@ services:
       INFLUX_ORG: ${INFLUX_ORG:-tankwatch}
       INFLUX_BUCKET: ${INFLUX_BUCKET:-sensors}
       INFLUX_READ_TOKEN: ${INFLUX_READ_TOKEN:-}
+
+  # Discovery beacon: answers "is there a TankWatch hub here?" on port 8087 so collectors and displays can
+  # find the hub without anyone typing its address. Serves only hub/beacon/tankwatch.json (no secrets).
+  beacon:
+    image: busybox:1.36.1
+    restart: unless-stopped
+    network_mode: "service:influxdb"   # same address as InfluxDB, so "where the beacon is" = "where the data goes"
+    volumes:
+      - ./beacon:/www:ro
+    command: ["httpd", "-f", "-p", "8087", "-h", "/www"]
 
 volumes:
   influxdb-data:

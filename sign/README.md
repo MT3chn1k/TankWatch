@@ -62,8 +62,10 @@ on your computer (`pip install mpremote`).
    cp secrets.example.py secrets.py       # Wi-Fi name and password, read-only token
    cp config.example.json config.json     # hub address, collectors, locations, colour ranges
    ```
-   In `config.json`, each collector's `name` must match the name it reports (`TANKWATCH_NODE` in its `.env`, or
-   its host name). `label` is what the sign prints; keep it to three characters.
+   In `config.json`, each collector's `name` must match the name it reports (`node:` in its `tankwatch.yaml`,
+   which setup.sh asks for). `label` is what the sign prints; keep it to three characters. Use the hub's
+   **display** join code's address and token: `./setup.sh codes` on the hub prints the address, and the read-only
+   token is `INFLUX_READ_TOKEN` in `hub/.env`.
 4. **Run a collector on the hub machine too** (just `node_health`), so the hub gets its own status block.
 5. **Copy everything to the sign** (plug into the Pico's micro-USB, not the board's edge port):
    ```sh
