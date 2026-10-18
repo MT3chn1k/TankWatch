@@ -68,6 +68,10 @@ UPTIME_FLUX = ('from(bucket:"%s") |> range(start:-24h, stop:-1m) ' % BUCKET
                '|> mean(column:"up") |> group() |> keep(columns:["node","up"])')
 # the same over the last hour; gold needs this at 100%
 UPTIME_HOUR_FLUX = UPTIME_FLUX.replace("start:-24h", "start:-1h")
+# did the collector report 24-26 hours ago? Gold needs a full day of history, so a new one waits a day
+HISTORY_FLUX = ('from(bucket:"%s") ' % BUCKET + '|> range(start:-26h, stop:-24h) '
+                '|> filter(fn:(r)=> r._measurement=="node_health" and r._field=="load1") '
+                '|> count() |> group() |> keep(columns:["node","_value"])')
 GOLD_DAY = 0.998        # gold: at least 99.8% over 24 h (at most one missed 2-minute check) ...
 GOLD_HOUR = 0.9995      # ... and 100% over the last hour
 SILENT_S = 90      # no health report for this long = down
@@ -141,7 +145,7 @@ TREND_TOP = gfx.create_pen(95, 55, 0)
 
 # hosts: None = not checked yet, else "up", "warn" or "down"; uptime: fraction 0-1
 state = {"temp_f": None, "hum": None, "t": None, "hosts": {n: None for n in NAMES}, "detail": {},
-         "uptime": {}, "uptime_hour": {}, "trend": {}, "err": None, "clock_ok": False}
+         "uptime": {}, "uptime_hour": {}, "has_day": {}, "trend": {}, "err": None, "clock_ok": False}
 
 wifi_fails = 0
 
@@ -297,6 +301,11 @@ def poll_uptime_hour():
 
 
 def poll_uptime():
+    try:
+        state["has_day"] = {row["node"]: int(row["_value"]) > 0 for row in influx(HISTORY_FLUX)}
+    except Exception as e:
+        state["has_day"] = {}  # unknown: no gold rather than false gold
+        log("history query failed", e)
     try:
         state["uptime"] = {row["node"]: float(row["up"]) for row in influx(UPTIME_FLUX)}
     except Exception as e:
@@ -562,9 +571,10 @@ def draw_art(x, y, art, pen, gold=False):
 
 
 def full_day(name):
-    """Gold: at least 99.8% over the last 24 hours and 100% over the last hour (2-minute windows)."""
+    """Gold: a full day of history, at least 99.8% over the last 24 hours and 100% over the last hour
+    (2-minute windows)."""
     u, h = state["uptime"].get(name), state["uptime_hour"].get(name)
-    return u is not None and h is not None and u >= GOLD_DAY and h >= GOLD_HOUR
+    return bool(state["has_day"].get(name)) and u is not None and h is not None and u >= GOLD_DAY and h >= GOLD_HOUR
 
 
 def draw_fish(x, y, pen, digit, gold=False):

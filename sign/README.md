@@ -32,7 +32,8 @@ AIR temperature, WATER temperature, humidity, and a scrolling 24-hour uptime per
 screen each collector can have an icon (`"icon": "fish"`, or `"heart"`, which glows gently while it's up and is a
 good fit for the hub). A collector that reported in at least 99.8% of the 2-minute windows of the last 24 hours (at most
 one missed 2-minute check, a gap of about 2 to 3 minutes) and in every window of the last hour gets a **gold outline** in place of its
-percentage, so a good day is all gold at a glance. A collector that's down loses its gold at once. Colours follow
+percentage, so a good day is all gold at a glance. A collector that's down loses its gold at once, and a new collector needs a full 24 hours of history before it
+can turn gold. Colours follow
 `air_range_f` / `water_range_f`: blue below, green inside, orange above. A reading older than 15 minutes
 turns grey and blinks its age.
 
