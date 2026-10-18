@@ -66,6 +66,10 @@ UPTIME_FLUX = ('from(bucket:"%s") |> range(start:-24h, stop:-1m) ' % BUCKET
                '|> map(fn:(r)=>({r with up: if r._value > 0 then 1.0 else 0.0, started: if r._value > 0 then 1 else 0})) '
                '|> cumulativeSum(columns:["started"]) |> filter(fn:(r)=> r.started > 0) '
                '|> mean(column:"up") |> group() |> keep(columns:["node","up"])')
+# the same over the last hour; gold needs this at 100%
+UPTIME_HOUR_FLUX = UPTIME_FLUX.replace("start:-24h", "start:-1h")
+GOLD_DAY = 0.998        # gold: at least 99.8% over 24 h (at most one missed 2-minute check) ...
+GOLD_HOUR = 0.9995      # ... and 100% over the last hour
 SILENT_S = 90      # no health report for this long = down
 HOT_C = CFG.get("hot_cpu_c", 77)   # 77 C is about 170 F
 AIR_RANGE = CFG.get("air_range_f", [68, 80])
@@ -137,7 +141,7 @@ TREND_TOP = gfx.create_pen(95, 55, 0)
 
 # hosts: None = not checked yet, else "up", "warn" or "down"; uptime: fraction 0-1
 state = {"temp_f": None, "hum": None, "t": None, "hosts": {n: None for n in NAMES}, "detail": {},
-         "uptime": {}, "trend": {}, "err": None, "clock_ok": False}
+         "uptime": {}, "uptime_hour": {}, "trend": {}, "err": None, "clock_ok": False}
 
 wifi_fails = 0
 
@@ -285,6 +289,13 @@ def poll_hosts():
             set_host(name, "up")
 
 
+def poll_uptime_hour():
+    try:
+        state["uptime_hour"] = {row["node"]: float(row["up"]) for row in influx(UPTIME_HOUR_FLUX)}
+    except Exception as e:
+        log("hour uptime query failed", e)
+
+
 def poll_uptime():
     try:
         state["uptime"] = {row["node"]: float(row["up"]) for row in influx(UPTIME_FLUX)}
@@ -393,7 +404,8 @@ def uptime_text(name):
     if u is None:
         return "--"
     if u >= 0.9995:
-        return "100%"
+        # 100% means gold, so never show it without the gold (same test as draw_names)
+        return "100%" if full_day(name) and state["hosts"][name] != "down" else "99%"
     # whole numbers from 10% up, rounded down so 99.7% reads 99% (100% means a full day)
     return "%d%%" % int(u * 100) if u >= 0.1 else "%.1f%%" % (u * 100)
 
@@ -550,9 +562,9 @@ def draw_art(x, y, art, pen, gold=False):
 
 
 def full_day(name):
-    """True when the collector reported in every 2-minute window of the last 24 hours (shown as 100%)."""
-    u = state["uptime"].get(name)
-    return u is not None and u >= 0.9995
+    """Gold: at least 99.8% over the last 24 hours and 100% over the last hour (2-minute windows)."""
+    u, h = state["uptime"].get(name), state["uptime_hour"].get(name)
+    return u is not None and h is not None and u >= GOLD_DAY and h >= GOLD_HOUR
 
 
 def draw_fish(x, y, pen, digit, gold=False):
@@ -765,6 +777,7 @@ def main():
                     last_uptime = now
                 if now - last_trend >= POLL_TREND_S:
                     poll_trend()
+                    poll_uptime_hour()
                     last_trend = now
             else:
                 state["err"] = "WIFI?"
