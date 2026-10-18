@@ -20,6 +20,7 @@ Which hub, collectors and locations to show live in config.json (see config.exam
 Wi-Fi name/password and the InfluxDB read-only token live in secrets.py.
 """
 import json
+import math
 import time
 import machine
 import network
@@ -391,7 +392,10 @@ def uptime_text(name):
     u = state["uptime"].get(name)
     if u is None:
         return "--"
-    return "100%" if u >= 0.9995 else "%.1f%%" % (u * 100)
+    if u >= 0.9995:
+        return "100%"
+    # whole numbers from 10% up, rounded down so 99.7% reads 99% (100% means a full day)
+    return "%d%%" % int(u * 100) if u >= 0.1 else "%.1f%%" % (u * 100)
 
 
 def draw_hosts():
@@ -498,8 +502,8 @@ DIGITS = {"1": (".#.", "##.", ".#.", ".#.", "###"),
           "4": ("#.#", "#.#", "###", "..#", "..#")}
 
 
-# 9x8 heart for the hub. It beats (lub-dub, once every 1.2 s) while the hub is reporting, and stays
-# big and still when it's down or not checked yet.
+# 9x8 heart for the hub. While the hub is reporting it glows: its brightness swells and fades
+# smoothly, once every 2.4 s. Down or not checked yet, it stays steady.
 HEART = (".##...##.",
          "#########",
          "#########",
@@ -508,22 +512,16 @@ HEART = (".##...##.",
          "..#####..",
          "...###...",
          "....#....")
-HEART_SMALL = (".........",
-               "..##.##..",
-               ".#######.",
-               ".#######.",
-               "..#####..",
-               "...###...",
-               "....#....",
-               ".........")
-BEAT_MS = 1200
+GLOW_MS = 2400
+GLOW_RGB = {"up": (0, 170, 40), "warn": (230, 150, 0)}   # the GREEN and AMBER pens
 
 
-def heart_art(status):
-    if status not in ("up", "warn"):
-        return HEART
-    t = time.ticks_ms() % BEAT_MS
-    return HEART if t < 140 or 260 <= t < 400 else HEART_SMALL
+def heart_pen(status, pen):
+    rgb = GLOW_RGB.get(status)
+    if rgb is None:
+        return pen
+    f = 0.675 + 0.325 * math.cos(2 * math.pi * (time.ticks_ms() % GLOW_MS) / GLOW_MS)   # 35% .. 100%
+    return gfx.create_pen(int(rgb[0] * f), int(rgb[1] * f), int(rgb[2] * f))
 
 
 def _outline(art):
@@ -585,7 +583,7 @@ def draw_names():
                 draw_fish(x, 1, pen, n["label"][-1:], gold)
                 x += len(FISH[0]) + 2
             else:
-                draw_art(x, 2, heart_art(state["hosts"][name]), pen, gold)
+                draw_art(x, 2, HEART, heart_pen(state["hosts"][name], pen), gold)
                 x += len(HEART[0]) + 2
             text = "" if gold else uptime_text(name)
         elif gold:

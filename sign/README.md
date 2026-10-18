@@ -29,7 +29,7 @@ them look dead.
 
 **Main area: rotating readouts** with a faint one-hour trend graph behind each one:
 AIR temperature, WATER temperature, humidity, and a scrolling 24-hour uptime per collector. On the uptime
-screen each collector can have an icon (`"icon": "fish"`, or `"heart"`, which beats while it's up and is a
+screen each collector can have an icon (`"icon": "fish"`, or `"heart"`, which glows gently while it's up and is a
 good fit for the hub). A collector that reported in every 2-minute window of the last 24 hours gets a
 **gold outline** in place of "100%", so a good day is all gold at a glance. Colours follow
 `air_range_f` / `water_range_f`: blue below, green inside, orange above. A reading older than 15 minutes
