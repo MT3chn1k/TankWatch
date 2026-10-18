@@ -130,6 +130,7 @@ BLUE = gfx.create_pen(40, 110, 255)
 ORANGE = gfx.create_pen(255, 110, 0)
 CYAN = gfx.create_pen(0, 160, 200)
 AMBER = gfx.create_pen(230, 150, 0)
+GOLD = gfx.create_pen(255, 215, 0)       # outline for a full 24 hours up; yellower than AMBER (a warning)
 TREND_FILL = gfx.create_pen(45, 25, 0)   # faded amber behind the readings
 TREND_TOP = gfx.create_pen(95, 55, 0)
 
@@ -497,12 +498,67 @@ DIGITS = {"1": (".#.", "##.", ".#.", ".#.", "###"),
           "4": ("#.#", "#.#", "###", "..#", "..#")}
 
 
-def draw_fish(x, y, pen, digit):
+# 9x8 heart for the hub. It beats (lub-dub, once every 1.2 s) while the hub is reporting, and stays
+# big and still when it's down or not checked yet.
+HEART = (".##...##.",
+         "#########",
+         "#########",
+         "#########",
+         ".#######.",
+         "..#####..",
+         "...###...",
+         "....#....")
+HEART_SMALL = (".........",
+               "..##.##..",
+               ".#######.",
+               ".#######.",
+               "..#####..",
+               "...###...",
+               "....#....",
+               ".........")
+BEAT_MS = 1200
+
+
+def heart_art(status):
+    if status not in ("up", "warn"):
+        return HEART
+    t = time.ticks_ms() % BEAT_MS
+    return HEART if t < 140 or 260 <= t < 400 else HEART_SMALL
+
+
+def _outline(art):
+    """The pixels just outside an icon's shape (all eight directions), as (dx, dy) offsets."""
+    h, w = len(art), len(art[0])
+    on = lambda c, r: 0 <= r < h and 0 <= c < w and art[r][c] == "#"
+    return tuple((c, r) for r in range(-1, h + 1) for c in range(-1, w + 1)
+                 if not on(c, r) and any(on(c + dc, r + dr) for dc in (-1, 0, 1) for dr in (-1, 0, 1)))
+
+
+OUTLINES = {}
+
+
+def draw_art(x, y, art, pen, gold=False):
+    if gold:
+        if art not in OUTLINES:
+            OUTLINES[art] = _outline(art)
+        gfx.set_pen(GOLD)
+        for dx, dy in OUTLINES[art]:
+            gfx.pixel(x + dx, y + dy)
     gfx.set_pen(pen)
-    for r, row in enumerate(FISH):
+    for r, row in enumerate(art):
         for c, ch in enumerate(row):
             if ch == "#":
                 gfx.pixel(x + c, y + r)
+
+
+def full_day(name):
+    """True when the collector reported in every 2-minute window of the last 24 hours (shown as 100%)."""
+    u = state["uptime"].get(name)
+    return u is not None and u >= 0.9995
+
+
+def draw_fish(x, y, pen, digit, gold=False):
+    draw_art(x, y, FISH, pen, gold)
     gfx.set_pen(BLACK)
     gfx.pixel(x + FISH_EYE[0], y + FISH_EYE[1])
     dx, dy = FISH_DIGIT_AT
@@ -513,22 +569,46 @@ def draw_fish(x, y, pen, digit):
 
 
 def draw_names():
-    """Scroll "<fish 1> 100%  <fish 2> 99.7% ... HUB 100%", each coloured by health. True once it has scrolled past."""
+    """Scroll each collector's 24-hour uptime, coloured by health: "<fish 1> 99.7%  <heart> ...".
+    A collector that was up the whole 24 hours gets a gold outline instead of "100%". True once it has scrolled past."""
     global scroll_x
     gfx.set_font("bitmap8")
     x = scroll_x
     for n in NODES:
         name = n["name"]
         pen = host_pen(name)
-        if n.get("icon") == "fish":
-            draw_fish(x, 1, pen, n["label"][-1:])
-            x += len(FISH[0]) + 2
-            text = uptime_text(name)
+        gold = full_day(name) and state["hosts"][name] != "down"  # a dead collector loses its gold at once
+        icon = n.get("icon")
+        if icon in ("fish", "heart"):
+            x += 1  # room for the outline
+            if icon == "fish":
+                draw_fish(x, 1, pen, n["label"][-1:], gold)
+                x += len(FISH[0]) + 2
+            else:
+                draw_art(x, 2, heart_art(state["hosts"][name]), pen, gold)
+                x += len(HEART[0]) + 2
+            text = "" if gold else uptime_text(name)
+        elif gold:
+            # no icon: the label in a gold box
+            text = n["label"]
+            gfx.set_pen(GOLD)
+            w = gfx.measure_text(text, 1)
+            gfx.rectangle(x, 0, w + 3, 1)
+            gfx.rectangle(x, H - 1, w + 3, 1)
+            gfx.rectangle(x, 0, 1, H)
+            gfx.rectangle(x + w + 2, 0, 1, H)
+            gfx.set_pen(pen)
+            gfx.text(text, x + 2, 2, -1, 1)
+            x += w + 3 + 4
+            text = ""
         else:
             text = "%s %s" % (n["label"], uptime_text(name))
-        gfx.set_pen(pen)
-        gfx.text(text, x, 2, -1, 1)
-        x += gfx.measure_text(text + "   ", 1)
+        if text:
+            gfx.set_pen(pen)
+            gfx.text(text, x, 2, -1, 1)
+            x += gfx.measure_text(text + "   ", 1)
+        else:
+            x += 3
     scroll_x -= 1
     if x < 0:
         scroll_x = W

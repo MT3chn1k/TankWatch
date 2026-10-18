@@ -28,7 +28,10 @@ them look dead.
 *The standard WATER readout with its one-hour trend and four green status blocks. Sample values, staged for the photo.*
 
 **Main area: rotating readouts** with a faint one-hour trend graph behind each one:
-AIR temperature, WATER temperature, humidity, and a scrolling 24-hour uptime per collector. Colours follow
+AIR temperature, WATER temperature, humidity, and a scrolling 24-hour uptime per collector. On the uptime
+screen each collector can have an icon (`"icon": "fish"`, or `"heart"`, which beats while it's up and is a
+good fit for the hub). A collector that reported in every 2-minute window of the last 24 hours gets a
+**gold outline** in place of "100%", so a good day is all gold at a glance. Colours follow
 `air_range_f` / `water_range_f`: blue below, green inside, orange above. A reading older than 15 minutes
 turns grey and blinks its age.
 
