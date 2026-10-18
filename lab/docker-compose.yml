@@ -5,6 +5,18 @@ x-collector: &collector
   image: tankwatch-node
   restart: unless-stopped
   networks: [hub]
+  user: "1000:1000"                   # locked down as on a real Pi: see node/docker-compose.yml
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  read_only: true
+  tmpfs: [/tmp]
+
+x-locked-display: &locked
+  user: "1000:1000"
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  read_only: true
+  tmpfs: [/tmp]
 
 services:
   hub-pi:
@@ -29,6 +41,7 @@ services:
     volumes: ["./collectors/kitchen-pi.yaml:/config/tankwatch.yaml:ro"]
 
   display-mini:                       # virtual Unicorn HAT Mini: http://localhost:8090
+    <<: *locked
     build: {context: .., dockerfile: display/Dockerfile}
     image: tankwatch-display
     restart: unless-stopped
@@ -36,6 +49,7 @@ services:
     ports: ["8090:8090"]
     environment: {TANKWATCH_JOIN: "${DISPLAY_CODE}", PANEL: web}
   display-sign:                       # the real sign code on a virtual Galactic Unicorn: http://localhost:8091
+    <<: *locked
     image: tankwatch-display
     restart: unless-stopped
     networks: [hub]

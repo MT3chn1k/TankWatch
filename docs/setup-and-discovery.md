@@ -104,3 +104,32 @@ start the container (see [install-node.md](install-node.md)); `--dry-run` only w
 See [node/tankwatch.example.yaml](../node/tankwatch.example.yaml). In short: the collector's name, the hub
 settings from the join code, and the list of sensors with their locations. The older layout (`config.yaml` plus
 `INFLUX_*` settings in `.env`) still works, so existing installs keep running.
+
+## What the containers can and can't do
+
+Collectors and displays use the Pi's own network (`network_mode: host`) so discovery can scan your home network
+and the collector takes the Pi's name. That would normally give a container more than it needs, so both are
+locked down:
+
+| Limit | Collector | Display (HAT Mini) | What it prevents |
+|---|---|---|---|
+| Runs as | the Pi user who ran `setup.sh` (usually `pi`) | root, to open the HAT's devices | the collector can't read other users' files, such as SSH keys and password hashes |
+| Linux capabilities | none | none | capturing or forging network traffic, changing network settings, reading files it doesn't own |
+| Filesystem | read-only, except its own `tankwatch.yaml` | read-only | changing its own code or leaving anything behind |
+| Gaining privileges | blocked (`no-new-privileges`) | blocked | a bug turning into root access |
+| Host files it can see | only the `node` folder (for disk use) and `/sys/bus/w1` if you have probes | none | |
+| Devices | `/dev/gpiomem` or `/dev/gpiochip*` only if a DHT is wired (plus the `gpio` group) | the HAT's SPI devices | |
+
+What host networking still allows: it can reach anything on your home network that the Pi can, including services
+on the Pi that only listen on `localhost`. Treat it like any program you install on the Pi.
+
+### Known limits
+
+- **A device on your network could pretend to be your hub.** The beacon tells anyone who asks your hub's id, so
+  something on your Wi-Fi could answer discovery with that id. A collector that switched to it would send it
+  readings and its **write-only** token. That token can't read or delete your history, but it could be used to write
+  junk readings, and a fake hub could feed displays false readings. Discovery only runs after the real hub has been
+  unreachable for 3 minutes. If you're worried, give the hub a DHCP reservation, and replace the collector token if
+  you ever see a "hub moved" message you didn't expect.
+- **The display web pages (ports 8090 and 8091) have no password.** They show readings and collector names to
+  anyone on your network. Don't open them to the internet.

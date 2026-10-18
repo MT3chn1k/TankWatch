@@ -140,17 +140,19 @@ helper config "$HUB_JSON" "$HUB_URL" "$NAME" > tankwatch.yaml
 printf 'sensors:\n%s' "$SENSORS" >> tankwatch.yaml
 chmod 600 tankwatch.yaml
 
-if [ -n "$OVERRIDE_VOLUMES$OVERRIDE_DEVICES" ]; then
-  {
-    echo "# Hardware access for this Pi's sensors, written by setup.sh."
-    echo "services:"
-    echo "  node:"
-    [ -n "$OVERRIDE_VOLUMES" ] && printf '    volumes:\n%s' "$OVERRIDE_VOLUMES"
-    [ -n "$OVERRIDE_DEVICES" ] && printf '    devices:\n%s' "$OVERRIDE_DEVICES"
-  } > docker-compose.override.yml
-else
-  rm -f docker-compose.override.yml
-fi
+# The collector runs as whoever ran setup.sh (it owns tankwatch.yaml, which only its owner can read), and joins the
+# gpio group only if a DHT sensor needs the GPIO pins
+GPIO_GID=""
+[ -n "$OVERRIDE_DEVICES" ] && GPIO_GID=$(getent group gpio 2>/dev/null | cut -d: -f3 || true)
+{
+  echo "# This Pi's settings for the collector container, written by setup.sh."
+  echo "services:"
+  echo "  node:"
+  echo "    user: \"$(id -u):$(id -g)\""
+  [ -n "$GPIO_GID" ] && printf '    group_add: ["%s"]\n' "$GPIO_GID"
+  [ -n "$OVERRIDE_VOLUMES" ] && printf '    volumes:\n%s' "$OVERRIDE_VOLUMES"
+  [ -n "$OVERRIDE_DEVICES" ] && printf '    devices:\n%s' "$OVERRIDE_DEVICES"
+} > docker-compose.override.yml
 echo "Sensors:"; grep -E '^  - type:' tankwatch.yaml | sed 's/^  - type: /  /'
 
 if [ "${NEED_REBOOT:-0}" = 1 ]; then

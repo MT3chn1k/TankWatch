@@ -11,6 +11,12 @@ services:
     container_name: tankwatch-display
     restart: unless-stopped
     network_mode: host                     # discovery scans your home network
+    # Locked down: no Linux capabilities (no capturing network traffic despite host networking), no way to gain
+    # privileges, read-only filesystem. It stays root only so it can open the HAT's devices, which root owns.
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs: [/tmp]
     env_file: .env
     environment: {PANEL: hatmini}
     devices:

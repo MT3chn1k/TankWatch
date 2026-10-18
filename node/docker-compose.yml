@@ -7,6 +7,14 @@ services:
     container_name: tankwatch-node
     restart: unless-stopped
     network_mode: host                    # discovery scans your home network, and the collector takes the Pi's name
+    # Locked down: it runs as the Pi user who ran setup.sh (setup.sh writes the exact user, and the gpio group if a
+    # DHT needs it, into docker-compose.override.yml), with every Linux capability removed (so no capturing network
+    # traffic despite host networking), no way to gain privileges, and a read-only filesystem.
+    user: "1000:1000"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs: [/tmp]
     env_file:
       - path: .env                        # optional: the older INFLUX_* / TANKWATCH_NODE settings
         required: false
