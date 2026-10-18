@@ -37,7 +37,9 @@ helper() { python3 setup_helpers.py "$@"; }
 # --- 1. Docker ---------------------------------------------------------------------------------------
 if [ "$NODOCKER" = 0 ] && ! command -v docker >/dev/null; then
   say "Docker isn't installed"
-  yesno "Install it now (from get.docker.com, takes a few minutes)?" || { echo "Docker is needed. Stopping."; exit 1; }
+  echo "This uses Docker's official install script (https://get.docker.com). To install by hand instead, follow"
+  echo "https://docs.docker.com/engine/install/debian/ then run ./setup.sh again."
+  yesno "Install it now (takes a few minutes)?" || { echo "Docker is needed. Stopping."; exit 1; }
   curl -fsSL https://get.docker.com | sudo sh
   sudo usermod -aG docker "$USER"
 fi
@@ -112,7 +114,13 @@ if [ -d $W1 ]; then
 elif [ -f "$CONFIG_TXT" ] && ! grep -q '^dtoverlay=w1-gpio' "$CONFIG_TXT"; then
   if yesno "1-Wire (for DS18B20 water probes) is off. Turn it on? It takes effect after a reboot"; then
     if [ "$DRY" = 1 ]; then echo "(dry run: would add dtoverlay=w1-gpio to $CONFIG_TXT)"
-    else echo "dtoverlay=w1-gpio" | sudo tee -a "$CONFIG_TXT" >/dev/null; NEED_REBOOT=1; fi
+    else
+      BACKUP="$CONFIG_TXT.bak-tankwatch-$(date +%Y%m%d-%H%M%S)"     # this file controls how the Pi boots: copy it first
+      sudo cp -p "$CONFIG_TXT" "$BACKUP"
+      echo "dtoverlay=w1-gpio" | sudo tee -a "$CONFIG_TXT" >/dev/null
+      echo "Added dtoverlay=w1-gpio to $CONFIG_TXT. The original is saved as $BACKUP"
+      NEED_REBOOT=1
+    fi
   fi
 fi
 

@@ -102,6 +102,10 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER    # then log out and back in
 ```
 
+That's Docker's official convenience script. To install by hand instead, follow
+[Docker's Debian instructions](https://docs.docker.com/engine/install/debian/). The collector wizard offers to run
+the script for you if Docker is missing.
+
 ### 1. The hub
 
 ```sh
@@ -188,7 +192,13 @@ If you try a combination that isn't in this list, please open an issue with what
 - [ ] pH, TDS, soil moisture, level sensors
 - [ ] Network traffic mapping per node (NetFlow)
 - [ ] Automated nightly backups of every node and the hub, with monthly archives
+- [ ] The hub proves its identity to collectors (closes the hub-impersonation gap in SECURITY.md)
 - [ ] Integrations: smart lighting, wearables
+
+## Security
+
+TankWatch is for a trusted home network: traffic is plain HTTP, and the hub must never be opened to the internet.
+Read [SECURITY.md](SECURITY.md) for the trust model and how to report a problem privately.
 
 ## License
 

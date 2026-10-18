@@ -105,6 +105,12 @@ See [node/tankwatch.example.yaml](../node/tankwatch.example.yaml). In short: the
 settings from the join code, and the list of sensors with their locations. The older layout (`config.yaml` plus
 `INFLUX_*` settings in `.env`) still works, so existing installs keep running.
 
+## Trust model
+
+TankWatch assumes **a trusted home network**. Everything travels as plain, unencrypted HTTP, so tokens and
+readings are visible to any device on the same network. Don't run it on shared, guest or public Wi-Fi, and don't
+open it to the internet. See [SECURITY.md](../SECURITY.md).
+
 ## What the containers can and can't do
 
 Collectors and displays use the Pi's own network (`network_mode: host`) so discovery can scan your home network
@@ -130,6 +136,8 @@ on the Pi that only listen on `localhost`. Treat it like any program you install
   readings and its **write-only** token. That token can't read or delete your history, but it could be used to write
   junk readings, and a fake hub could feed displays false readings. Discovery only runs after the real hub has been
   unreachable for 3 minutes. If you're worried, give the hub a DHCP reservation, and replace the collector token if
-  you ever see a "hub moved" message you didn't expect.
+  you ever see a "hub moved" message you didn't expect. (On a trusted network this is no worse than the plain-HTTP
+  limit above: a device that can impersonate the hub could already see the token in transit.) A future version will
+  have the hub prove its identity with a key carried only in the join code, so an impostor can't.
 - **The display web pages (ports 8090 and 8091) have no password.** They show readings and collector names to
   anyone on your network. Don't open them to the internet.
