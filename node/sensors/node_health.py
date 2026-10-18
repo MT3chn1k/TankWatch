@@ -2,8 +2,8 @@
 core and 5 V input voltage (when vcgencmd is available), load, memory and disk use.
 
 Works in a container: CPU temperature and throttle flags come from /sys, load and memory from /proc
-(both show the host). Mount the host's root read-only at /host to report the host's disk, not the
-container's.
+(both show the host). For the host's disk use, mount any folder on the host's main disk read-only at
+/host (docker-compose.yml mounts the collector's own folder). Don't mount the host's whole filesystem.
 
 options:
   disk_path: /host       (default: /host if it exists, else /)

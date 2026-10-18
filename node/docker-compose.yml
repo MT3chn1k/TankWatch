@@ -10,7 +10,9 @@ services:
     hostname: ${TANKWATCH_NODE:-tankwatch-node}
     volumes:
       - ./config.yaml:/config/config.yaml:ro
-      - /:/host:ro                         # node_health reports the host's disk use
+      # node_health reports disk use for the disk this folder is on (the Pi's main disk). Only this folder is
+      # shared, read-only: never mount the host's whole filesystem, which would expose SSH keys and password hashes.
+      - .:/host:ro
       # - /sys/bus/w1:/sys/bus/w1:ro       # ds18b20: 1-Wire probes (enable dtoverlay=w1-gpio first)
     # dht: GPIO access. Docker won't start if a listed device is missing, so keep only the one your Pi has:
     # devices:
