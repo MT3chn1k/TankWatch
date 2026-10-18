@@ -176,6 +176,7 @@ aquariums, with the status sign on a shelf. The packaged version here is new. Wh
 | Unicorn HAT Mini display | Its web version in the test lab. The real HAT: next, on a Raspberry Pi 4 |
 | `ds18b20` and `node_health` sensor code | A Raspberry Pi 3B+ with a real probe |
 | `dht` sensor code | The same logic runs the home setup's DHT11s, but not yet from inside the Docker container |
+| `dht` on a **Raspberry Pi 5** | **Expected not to work yet.** The Pi 5's GPIO needs the `lgpio` library, which the collector image doesn't include. Use a Pi 3 or 4 for a DHT, or a DS18B20 |
 | Status sign | This version: its screens and shows on a PC simulator against a real hub. The original, home-specific version it came from runs the real sign every day |
 | Hub on a Raspberry Pi 5 in Docker | Not yet: the home hub runs the same InfluxDB and Grafana without Docker |
 

@@ -117,9 +117,13 @@ def save_hub_url(path, old, new):
     # the url line may be quoted (setup.sh writes "http://...") or bare (hand-written)
     updated = re.sub(r'(?m)^(\s*url:\s*)"?%s"?\s*$' % re.escape(old), lambda m: m.group(1) + '"%s"' % new, text, count=1)
     if updated != text:
+        # The file is bind-mounted on its own, so it can't be replaced by renaming a temporary file. Keep the window
+        # where it's incomplete as short as possible: one write of the whole text, then force it to disk.
         with open(path, "w", encoding="utf-8") as fh:
             fh.write(updated)
-        log.info("saved new hub address in %s", path)
+            fh.flush()
+            os.fsync(fh.fileno())
+        log.info("saved new hub address in %s (was %s)", path, old)
 
 
 def load_config():
@@ -128,8 +132,27 @@ def load_config():
     if not path:
         path = next((p for p in ("/config/tankwatch.yaml", "tankwatch.yaml", "/config/config.yaml", "config.yaml")
                      if os.path.exists(p)), "tankwatch.yaml")
-    with open(path, encoding="utf-8") as fh:
-        return yaml.safe_load(fh) or {}, path
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except PermissionError:
+        raise SystemExit("can't read %s: it belongs to another user. Run ./setup.sh again as the user who set this "
+                         "collector up (setup.sh records that user for the container)." % path)
+    except OSError as e:
+        raise SystemExit("can't read %s (%s). Run ./setup.sh to create it." % (path, e.strerror))
+    if not text.strip():
+        raise SystemExit("%s is empty (perhaps a power cut while it was being saved). Run ./setup.sh again with the "
+                         "hub's join code to rewrite it." % path)
+    try:
+        cfg = yaml.safe_load(text)
+    except yaml.YAMLError as e:
+        mark = getattr(e, "problem_mark", None)
+        where = " at line %d" % (mark.line + 1) if mark else ""
+        raise SystemExit("%s is damaged%s, so it can't be read. Run ./setup.sh again to rewrite it (with the hub's join "
+                         "code if it asks)." % (path, where))
+    if not isinstance(cfg, dict):
+        raise SystemExit("%s doesn't look like a TankWatch config. Run ./setup.sh again to rewrite it." % path)
+    return cfg, path
 
 
 def hub_settings(cfg):

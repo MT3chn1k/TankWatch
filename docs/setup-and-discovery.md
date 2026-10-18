@@ -119,11 +119,11 @@ locked down:
 
 | Limit | Collector | Display (HAT Mini) | What it prevents |
 |---|---|---|---|
-| Runs as | the Pi user who ran `setup.sh` (usually `pi`) | root, to open the HAT's devices | the collector can't read other users' files, such as SSH keys and password hashes |
+| Runs as | the Pi user who ran `setup.sh` (usually `pi`) | root, to open the HAT's devices | the collector being root inside its container |
 | Linux capabilities | none | none | capturing or forging network traffic, changing network settings, reading files it doesn't own |
 | Filesystem | read-only, except its own `tankwatch.yaml` | read-only | changing its own code or leaving anything behind |
 | Gaining privileges | blocked (`no-new-privileges`) | blocked | a bug turning into root access |
-| Host files it can see | only the `node` folder (for disk use) and `/sys/bus/w1` if you have probes | none | |
+| Host files it can see | only the `node` folder (read-only, for disk use), its `tankwatch.yaml`, and `/sys/bus/w1` if you have probes | none | reading anything else on the Pi, including SSH keys (yours too) and password hashes: they aren't shared with it |
 | Devices | `/dev/gpiomem` or `/dev/gpiochip*` only if a DHT is wired (plus the `gpio` group) | the HAT's SPI devices | |
 
 What host networking still allows: it can reach anything on your home network that the Pi can, including services
@@ -132,11 +132,17 @@ on the Pi that only listen on `localhost`. Treat it like any program you install
 ### Known limits
 
 - **A device on your network could pretend to be your hub.** The beacon tells anyone who asks your hub's id, so
-  something on your Wi-Fi could answer discovery with that id. A collector that switched to it would send it
-  readings and its **write-only** token. That token can't read or delete your history, but it could be used to write
-  junk readings, and a fake hub could feed displays false readings. Discovery only runs after the real hub has been
-  unreachable for 3 minutes. If you're worried, give the hub a DHCP reservation, and replace the collector token if
-  you ever see a "hub moved" message you didn't expect. (On a trusted network this is no worse than the plain-HTTP
+  something on your Wi-Fi could answer discovery with that id. Discovery only runs after the real hub has been
+  unreachable for 3 minutes, but then:
+  - a **collector** that switched to the fake hub would send it readings and its **write-only** token. That token
+    can't read or delete your history, but it could be used to write junk readings.
+  - a **display** that switched to it would show whatever the fake hub said, and the fake hub would get the display's
+    **read-only** token, **which can read your whole reading history**.
+
+  If you're worried, give the hub a DHCP reservation. If you ever see a "hub moved" message you didn't expect,
+  replace both tokens: blank `NODE_WRITE_TOKEN` and `INFLUX_READ_TOKEN` in `hub/.env`, delete the old tokens in
+  InfluxDB, run `./setup.sh`, and re-join your devices with the new codes. If you have the status sign, put the new
+  read-only token (`INFLUX_READ_TOKEN`) in its `secrets.py` too, or it will quietly stop getting data. (On a trusted network this is no worse than the plain-HTTP
   limit above: a device that can impersonate the hub could already see the token in transit.) A future version will
   have the hub prove its identity with a key carried only in the join code, so an impostor can't.
 - **The display web pages (ports 8090 and 8091) have no password.** They show readings and collector names to
