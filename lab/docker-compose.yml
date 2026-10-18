@@ -5,8 +5,6 @@ x-collector: &collector
   image: tankwatch-node
   restart: unless-stopped
   networks: [hub]
-  volumes:
-    - /:/host:ro
 
 services:
   hub-pi:

@@ -12,4 +12,6 @@ services:
         required: false
     volumes:
       - ./tankwatch.yaml:/config/tankwatch.yaml   # read-write: a moved hub's new address is saved here
-      - /:/host:ro                        # node_health reports the host's disk use
+      # node_health reports disk use for the disk this folder is on (the Pi's main disk). Only this folder is
+      # shared, read-only: never mount the host's whole filesystem, which would expose SSH keys and password hashes.
+      - .:/host:ro
