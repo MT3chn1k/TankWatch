@@ -52,11 +52,15 @@ To upgrade, take a backup, edit the image tags, then:
 docker compose pull && docker compose up -d
 ```
 
+To upgrade TankWatch itself (including the admin page): `git pull`, then `./setup.sh` in `hub/`. It keeps your
+passwords and tokens, adds any new settings (a hub from before the admin page gets its `ADMIN_PASSWORD` this
+way) and rebuilds the admin page.
+
 Collectors and displays: `git pull`, then `docker compose up -d --build` in `node/` or `display/`.
 
 ## Security
 
-- **Keep the hub on your home network.** Don't forward ports 3000, 8086 or 8087 on your router. To check your
+- **Keep the hub on your home network.** Don't forward ports 3000, 8086, 8087 or 8088 on your router. To check your
   tanks from outside, use a VPN such as WireGuard or Tailscale.
 - `hub/.env` holds every password and token. It's ignored by git; keep it that way, with `chmod 600`
   (setup.sh does this).
@@ -70,6 +74,7 @@ Collectors and displays: `git pull`, then `docker compose up -d --build` in `nod
 | 3000 | Grafana | You, in a browser |
 | 8086 | InfluxDB | Collectors (write), displays and the status sign (read), you (admin UI) |
 | 8087 | Discovery beacon | Collectors and displays finding the hub (serves only the hub's id and name) |
+| 8088 | Admin page | You, in a browser (user `admin`, `ADMIN_PASSWORD` from `hub/.env`) |
 
 ## When something's wrong
 

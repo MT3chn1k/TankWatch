@@ -11,6 +11,10 @@ put() { # put KEY VALUE: set KEY in .env if it's empty (adding the line if it's 
   if ! grep -q "^$1=" .env; then echo "$1=" >> .env; fi
   if [ -z "$(get "$1")" ]; then sed -i "s|^$1=.*|$1=$2|" .env; fi
 }
+set_() { # set_ KEY VALUE: set KEY in .env, replacing what's there
+  if ! grep -q "^$1=" .env; then echo "$1=" >> .env; fi
+  sed -i "s|^$1=.*|$1=$2|" .env
+}
 
 lan_ip() { # this machine's address on the home network
   is_ip() { echo "$1" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$'; }
@@ -37,6 +41,8 @@ print_codes() {
 
 TankWatch hub "$(get HUB_NAME)" is running at $ip
   Dashboards: http://$ip:3000   user $(get GRAFANA_ADMIN_USER), password $(get GRAFANA_ADMIN_PASSWORD)
+  Admin page: http://$ip:8088   user admin, password $(get ADMIN_PASSWORD)
+              (collector status, adding a sensor Pi, the status sign's config)
 
 Join code for collectors (sensor Pis). Paste it when node/setup.sh asks:
 
@@ -57,6 +63,7 @@ if [ "${1:-}" = codes ]; then print_codes; exit 0; fi
 put INFLUX_ADMIN_PASSWORD "$(rand 24)"
 put INFLUX_ADMIN_TOKEN "$(rand 48)"
 put GRAFANA_ADMIN_PASSWORD "$(rand 16)"
+put ADMIN_PASSWORD "$(rand 20)"
 put HUB_ID "$(rand 12)"
 put HUB_NAME "$(hostname 2>/dev/null || echo tankwatch-hub)"
 
@@ -80,15 +87,16 @@ token_for() { # token_for DESCRIPTION FLAG: create a token scoped to the sensors
 [ -n "$(get INFLUX_READ_TOKEN)" ] || put INFLUX_READ_TOKEN "$(token_for tankwatch-grafana-read --read-bucket)"
 [ -n "$(get NODE_WRITE_TOKEN)" ] || put NODE_WRITE_TOKEN "$(token_for tankwatch-node-write --write-bucket)"
 
-docker compose up -d --quiet-pull
+set_ HUB_DETECTED_ADDRESS "$(lan_ip)"
+docker compose up -d --quiet-pull --build
 
 # Check the hub answers on its network address, not just on this machine
 ip=$(lan_ip)
-for port in 8086 8087 3000; do                 # give each up to 30 s: Grafana takes a moment to start
+for port in 8086 8087 3000 8088; do                 # give each up to 30 s: Grafana takes a moment to start
   n=0; until curl -s -m 3 -o /dev/null "http://$ip:$port/" || [ $n -ge 10 ]; do n=$((n + 1)); sleep 3; done
   if [ $n -ge 10 ]; then
     echo "WARNING: nothing answered on $ip:$port. Other devices won't reach the hub until that works."
-    echo "         Check this machine's firewall allows Docker on ports 8086, 8087 and 3000."
+    echo "         Check this machine's firewall allows Docker on ports 8086, 8087, 3000 and 8088."
   fi
 done
 print_codes

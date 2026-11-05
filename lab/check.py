@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check the TankWatch lab end to end and print PASS / FAIL for each part. Run it a minute or two after
 ./start.sh (the kitchen-pi rediscovery test needs about a minute).   python lab/check.py"""
-import csv, io, json, os, subprocess, sys, urllib.request
+import base64, csv, io, json, os, subprocess, sys, urllib.error, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 env = dict(l.rstrip("\n").split("=", 1) for l in open(os.path.join(HERE, "run", "hub", ".env")) if "=" in l and not l.startswith("#"))
@@ -64,6 +64,27 @@ for name, port in (("virtual Unicorn HAT Mini", 8090), ("virtual status sign", 8
 # 5. dashboards
 check("Grafana up", b'"database"' in get("http://localhost:3000/api/health"))
 check("beacon answering", b'"tankwatch": "hub"' in get("http://localhost:8087/tankwatch.json"))
+
+# 6. admin page: password required, every collector listed, a join code for this hub
+auth = {"Authorization": "Basic " + base64.b64encode(("admin:" + env.get("ADMIN_PASSWORD", "")).encode()).decode()}
+try:
+    urllib.request.urlopen("http://localhost:8088/api/overview", timeout=5)
+    check("admin page asks for its password", False, "answered without one")
+except urllib.error.HTTPError as e:
+    check("admin page asks for its password", e.code == 401, "HTTP %d" % e.code)
+except Exception as e:
+    check("admin page asks for its password", False, str(e)[:60])
+try:
+    o = json.loads(urllib.request.urlopen(urllib.request.Request("http://localhost:8088/api/overview", headers=auth), timeout=10).read())
+    names = {c["node"] for c in o["collectors"]}
+    check("admin page lists every collector", {"hub-pi", "livingroom-pi", "upstairs-pi", "kitchen-pi"} <= names, ", ".join(sorted(names)))
+    j = json.loads(urllib.request.urlopen(urllib.request.Request("http://localhost:8088/api/join", headers=auth), timeout=5).read())
+    sys.path.insert(0, os.path.join(HERE, "..", "node"))
+    import discovery  # noqa: E402
+    d = discovery.decode_join(j["collector"])
+    check("admin page join code is for this hub", d["id"] == env["HUB_ID"] and d["role"] == "collector", d["url"])
+except Exception as e:
+    check("admin page with its password", False, str(e)[:60])
 
 print("\n%d of %d checks passed" % (sum(results), len(results)))
 sys.exit(0 if all(results) else 1)

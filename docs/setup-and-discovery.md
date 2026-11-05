@@ -19,7 +19,8 @@ with Docker Desktop, or a NAS with a container manager. `hub/setup.sh`:
 - starts InfluxDB (port 8086), Grafana (3000) and the discovery beacon (8087),
 - **checks those ports answer on the machine's network address**, not just on the machine itself. If they don't,
   the usual cause is a firewall: Windows and macOS may need to allow Docker,
-- prints the **join codes**. `./setup.sh codes` prints them again any time.
+- prints the **join codes**. `./setup.sh codes` prints them again any time, and so does the admin page
+  (`http://<hub>:8088`, **Add a sensor Pi** and **Displays**).
 
 ### Network setup for the hub
 
@@ -145,5 +146,8 @@ on the Pi that only listen on `localhost`. Treat it like any program you install
   read-only token (`INFLUX_READ_TOKEN`) in its `secrets.py` too, or it will quietly stop getting data. (On a trusted network this is no worse than the plain-HTTP
   limit above: a device that can impersonate the hub could already see the token in transit.) A future version will
   have the hub prove its identity with a key carried only in the join code, so an impostor can't.
+- **The admin page's password travels in plain HTTP**, like Grafana's. Anyone who can watch your network traffic
+  could see it, and with it the join codes. That's the same trust model as the rest of TankWatch: a trusted home
+  network only.
 - **The display web pages (ports 8090 and 8091) have no password.** They show readings and collector names to
   anyone on your network. Don't open them to the internet.

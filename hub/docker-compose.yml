@@ -1,4 +1,4 @@
-# TankWatch hub: InfluxDB stores the readings, Grafana shows them.
+# TankWatch hub: InfluxDB stores the readings, Grafana shows them, the admin page manages collectors.
 # First time: ./setup.sh  (creates .env with passwords and tokens, starts everything, prints join codes)
 services:
   influxdb:
@@ -48,6 +48,31 @@ services:
     volumes:
       - ./beacon:/www:ro
     command: ["httpd", "-f", "-p", "8087", "-h", "/www"]
+
+  # Admin page: http://<hub>:8088 (user admin, ADMIN_PASSWORD from .env). Collector status, what each one reports,
+  # adding a sensor Pi (it shows the join codes, so it's password protected) and a status sign config builder.
+  # It only reads: InfluxDB queries use the read-only token. NODE_WRITE_TOKEN is here only to build the join code.
+  admin:
+    build: ../admin
+    image: tankwatch-admin
+    restart: unless-stopped
+    ports: ["8088:8088"]
+    depends_on:
+      influxdb: {condition: service_healthy}
+    user: "65534:65534"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    environment:
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      INFLUX_ORG: ${INFLUX_ORG:-tankwatch}
+      INFLUX_BUCKET: ${INFLUX_BUCKET:-sensors}
+      INFLUX_READ_TOKEN: ${INFLUX_READ_TOKEN:-}
+      NODE_WRITE_TOKEN: ${NODE_WRITE_TOKEN:-}
+      HUB_ID: ${HUB_ID:-}
+      HUB_NAME: ${HUB_NAME:-}
+      HUB_ADDRESS: ${HUB_ADDRESS:-}
+      HUB_DETECTED_ADDRESS: ${HUB_DETECTED_ADDRESS:-}
 
 volumes:
   influxdb-data:

@@ -18,6 +18,9 @@ of dollars for, on hardware you already own, with no subscription and no cloud a
 ```
 
 - **Everything runs in Docker.** One command sets up the hub; a short wizard sets up each sensor Pi.
+- **An admin page for your whole fleet.** `http://<hub>:8088` shows every collector's health and what it
+  reports, walks you through adding a new sensor Pi (it shows the join code and spots the new Pi when it first
+  reports), and builds the status sign's config for you. See [admin/README.md](admin/README.md).
 - **Pis find their own way home.** Paste one join code on a new Pi and it finds the hub, detects its sensors and
   starts. If the hub's address ever changes, every device finds it again by itself.
   See [docs/setup-and-discovery.md](docs/setup-and-discovery.md).
@@ -116,7 +119,8 @@ cd tankwatch/hub
 
 `setup.sh` creates random passwords and tokens in `hub/.env`, starts InfluxDB, Grafana and the discovery beacon,
 checks other devices can reach them, and prints two **join codes**: one for collectors, one for displays.
-Open the dashboards at `http://<hub-ip>:3000` with the user and password it printed.
+Open the dashboards at `http://<hub-ip>:3000` and the admin page at `http://<hub-ip>:8088`, with the users and
+passwords it printed.
 
 ### 2. A collector (each sensor Pi)
 
@@ -126,7 +130,8 @@ cd tankwatch/node
 ./setup.sh
 ```
 
-Paste the collector join code when it asks. The wizard finds the hub, detects your DS18B20 probes, asks about
+Paste the collector join code when it asks. The admin page's **Add a sensor Pi** section shows the code and
+these commands, then tells you when the new Pi first reports. The wizard finds the hub, detects your DS18B20 probes, asks about
 a DHT sensor and where each sensor is, tests every sensor once, and starts the collector.
 
 - **No sensors wired yet?** Add `type: synthetic` to `tankwatch.yaml` for realistic made-up readings.
@@ -178,6 +183,7 @@ aquariums, with the status sign on a shelf. The packaged version here is new. Wh
 | `dht` sensor code | The same logic runs the home setup's DHT11s, but not yet from inside the Docker container |
 | `dht` on a **Raspberry Pi 5** | **Expected not to work yet.** The Pi 5's GPIO needs the `lgpio` library, which the collector image doesn't include. Use a Pi 3 or 4 for a DHT, or a DS18B20 |
 | Status sign | This version: its screens and shows on a PC simulator against a real hub. The original, home-specific version it came from runs the real sign every day |
+| Admin page | Against a real InfluxDB with sample collectors (healthy, amber, silent, new), in Chrome. The home setup has run its own version of it for weeks |
 | Hub on a Raspberry Pi 5 in Docker | Not yet: the home hub runs the same InfluxDB and Grafana without Docker |
 
 If you try a combination that isn't in this list, please open an issue with what worked and what didn't.
@@ -189,6 +195,7 @@ If you try a combination that isn't in this list, please open an issue with what
 - [x] Join codes, hub discovery and a collector setup wizard
 - [x] Test lab: a whole install in Docker with synthetic sensors and virtual displays
 - [x] Unicorn HAT Mini display (tested in its web version)
+- [x] Admin page on the hub: collector status, adding a sensor Pi, status sign config builder
 - [ ] Alerts (Grafana alerting to email / phone) with sensible defaults per sensor
 - [ ] pH, TDS, soil moisture, level sensors
 - [ ] Network traffic mapping per node (NetFlow)

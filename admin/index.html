@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TankWatch Admin</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<header>
+  <h1>TankWatch Admin</h1>
+  <nav><a href="#collectors">Collectors</a><a href="#add">Add a sensor Pi</a><a href="#sources">Readings</a>
+    <a href="#displays">Displays</a><a href="#sign">Sign config</a><a href="#hub">Hub</a></nav>
+  <span class="spacer"></span>
+  <span id="hub-name" class="badge">loading…</span>
+  <span id="updated" class="muted small"></span>
+  <button id="refresh" type="button">Refresh</button>
+</header>
+<div id="error" class="banner" hidden></div>
+<main>
+  <section id="collectors">
+    <h2>Collectors <small>every sensor Pi heard from in the last 7 days</small></h2>
+    <div class="grid" id="collector-grid"></div>
+    <p class="muted small">Green: reporting. Amber: reporting, but undervolted, throttled or hot. Red: silent for 90 seconds.
+      A Pi you've retired drops off the displays 24 hours after its last report, and off this page after 7 days.</p>
+  </section>
+
+  <section id="add">
+    <h2>Add a sensor Pi <small>about 10 minutes, most of it waiting for downloads</small></h2>
+    <ol class="steps">
+      <li><b>Wire the sensors</b> and use a good power supply.
+        <a href="https://github.com/MT3chn1k/TankWatch/blob/main/docs/wiring/ds18b20-wiring.svg" target="_blank" rel="noopener">DS18B20 water probe</a> ·
+        <a href="https://github.com/MT3chn1k/TankWatch/blob/main/docs/wiring/dht11-wiring.svg" target="_blank" rel="noopener">DHT11/DHT22 air sensor</a>.
+        No sensors yet? You can still add the Pi: it reports its own health, and you can add sensors later.</li>
+      <li><b>Install Docker</b> on the Pi (64-bit Raspberry Pi OS), then log out and back in:
+        <pre class="cmd" title="click to copy">curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER</pre></li>
+      <li><b>Get TankWatch and start the wizard:</b>
+        <pre class="cmd" title="click to copy">git clone https://github.com/MT3chn1k/tankwatch.git
+cd tankwatch/node
+./setup.sh</pre></li>
+      <li><b>Paste the collector join code</b> when the wizard asks for it.
+        <div class="secret">
+          <button id="show-collector" type="button" class="primary">Show the collector join code</button>
+          <pre id="collector-code" class="cmd code" title="click to copy" hidden></pre>
+          <p class="muted small">Treat it like a Wi-Fi password: it lets a device send readings to this hub (it can't read
+            or delete anything). Don't put it in chat, email or a screenshot.</p>
+        </div></li>
+      <li><b>Wait for it here.</b> <span id="watch" class="muted">Open this step to start watching for the new Pi.</span>
+        <div><button id="start-watch" type="button">Watch for a new collector</button></div></li>
+    </ol>
+  </section>
+
+  <section id="sources">
+    <h2>Readings <small>what each collector reports, by location (last 7 days)</small></h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Location</th><th>Kind</th><th>Collector</th><th>Sensor</th><th>Latest</th><th>When</th></tr></thead>
+      <tbody id="source-rows"></tbody>
+    </table></div>
+    <p class="muted small">Rename a location or a probe in that collector's <code>tankwatch.yaml</code>, or re-run its
+      <code>./setup.sh</code>. Old readings keep their old name.</p>
+  </section>
+
+  <section id="displays">
+    <h2>Displays <small>the status sign and Unicorn HAT Mini displays use the read-only display join code</small></h2>
+    <div class="secret">
+      <button id="show-display" type="button">Show the display join code</button>
+      <pre id="display-code" class="cmd code" title="click to copy" hidden></pre>
+      <p class="muted small">Read-only: it can see readings but can't change anything. Setup:
+        <a href="https://github.com/MT3chn1k/TankWatch/blob/main/display/README.md" target="_blank" rel="noopener">displays</a> ·
+        <a href="https://github.com/MT3chn1k/TankWatch/blob/main/sign/README.md" target="_blank" rel="noopener">status sign</a>.</p>
+    </div>
+  </section>
+
+  <section id="sign">
+    <h2>Status sign config <small>builds the sign's config.json from what this hub knows</small></h2>
+    <form id="sign-form" class="panel">
+      <div class="wide">
+        <div class="muted small">Collectors on the sign, top to bottom (up to 4). The label is 3 characters. The address is
+          optional: the sign checks it directly only if the hub stops answering.</div>
+        <div id="sign-nodes"></div>
+      </div>
+      <label>Air reading from<select name="air"></select></label>
+      <label>Water reading from<select name="water"></select></label>
+      <label>Air low °F<input name="alo" type="number" step="0.5" value="68"></label>
+      <label>Air high °F<input name="ahi" type="number" step="0.5" value="80"></label>
+      <label>Water low °F<input name="wlo" type="number" step="0.5" value="74"></label>
+      <label>Water high °F<input name="whi" type="number" step="0.5" value="82"></label>
+      <label>CPU hot above °C<input name="hot" type="number" step="1" value="77"></label>
+      <label>Wi-Fi country<input name="country" value="US" maxlength="2"></label>
+    </form>
+    <pre id="sign-json" class="cmd code" title="click to copy"></pre>
+    <div class="actions"><button id="sign-download" type="button" class="primary">Download config.json</button></div>
+    <p class="muted small">Copy it to the sign as <code>config.json</code>. The Wi-Fi password and the display token go in
+      the sign's <code>secrets.py</code>, never in this file.</p>
+  </section>
+
+  <section id="hub">
+    <h2>Hub</h2>
+    <div class="svc" id="services"></div>
+    <div class="links" id="links"></div>
+  </section>
+</main>
+<div id="toast" role="status"></div>
+<script src="admin.js"></script>
+</body>
+</html>

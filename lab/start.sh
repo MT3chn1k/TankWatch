@@ -10,6 +10,7 @@ PY=""; for p in python3 python; do if "$p" -c "import sys" >/dev/null 2>&1; then
 
 mkdir -p run/hub
 cp -r ../hub/. run/hub/                        # a private copy, so the lab never touches your real hub's .env
+mkdir -p run/admin && cp -r ../admin/. run/admin/   # the hub builds its admin page from ../admin
 if [ ! -f run/hub/.env ]; then
   cp run/hub/.env.example run/hub/.env
   sed -i 's/^HUB_NAME=.*/HUB_NAME=tw-lab-hub/' run/hub/.env

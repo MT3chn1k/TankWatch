@@ -31,7 +31,7 @@ python check.py     # after a minute or two: checks every part and prints PASS /
 On Windows, run `start.sh` and `stop.sh` from Git Bash.
 
 `start.sh` keeps the lab hub in `lab/run/hub/`, a private copy, so it never touches a real hub's settings in
-`hub/.env`. The lab hub uses the same ports as a real one (3000, 8086, 8087), so stop one before starting the other
+`hub/.env`. The lab hub uses the same ports as a real one (3000, 8086, 8087, 8088), so stop one before starting the other
 on the same machine.
 
 ## What check.py verifies
@@ -43,6 +43,8 @@ on the same machine.
    readings it buffered meanwhile.
 4. Both display Pis are drawing.
 5. Grafana and the beacon answer.
+6. The admin page refuses requests without its password, lists every collector with it, and hands out a
+   collector join code for this hub.
 
 A real run:
 
@@ -52,7 +54,7 @@ PASS  kitchen-pi found the hub by itself   hub Bx6SuuwzcV73 moved: http://10.254
 PASS  virtual Unicorn HAT Mini drawing (17x7)      40 pixels lit
 PASS  virtual status sign drawing (53x11)          99 pixels lit
 ...
-15 of 15 checks passed
+18 of 18 checks passed
 ```
 
 ## The synthetic sensors

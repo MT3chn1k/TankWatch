@@ -9,7 +9,7 @@ you trust.
   unencrypted, so any device on the same network can see them.
 - **Don't run it on shared, guest, public or office Wi-Fi.** On a network you don't control, anyone else on it
   could read your tokens and readings.
-- **Don't open the hub to the internet.** No port forwarding for 3000, 8086, 8087, 8090 or 8091. To check your
+- **Don't open the hub to the internet.** No port forwarding for 3000, 8086, 8087, 8088, 8090 or 8091. To check your
   tanks from away, use a VPN such as WireGuard or Tailscale.
 
 Within that model, TankWatch limits the damage of a lost device or a leaked code:
@@ -19,6 +19,9 @@ Within that model, TankWatch limits the damage of a lost device or a leaked code
 - Collector and display containers run with **no Linux capabilities**, a **read-only filesystem** and **no way to
   gain privileges**, and the collector runs as an ordinary user. See
   [docs/setup-and-discovery.md](docs/setup-and-discovery.md#what-the-containers-can-and-cant-do).
+- The **admin page** (port 8088) needs a password (`ADMIN_PASSWORD` in `hub/.env`) because it can show the join
+  codes. It only reads: it queries with the read-only token and can't change the hub. After 10 wrong passwords
+  from one address it stops answering that address for 10 minutes.
 - Secrets live in files only their owner can read (`hub/.env`, `node/tankwatch.yaml`), which git ignores.
 
 The known limits, including how a device on your network could impersonate the hub, are listed in
