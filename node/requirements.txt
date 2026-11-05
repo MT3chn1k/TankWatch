@@ -1,4 +1,10 @@
 PyYAML==6.0.2
 # Only needed for the dht sensor type:
-adafruit-circuitpython-dht==4.0.9
-adafruit-blinka==8.56.0
+adafruit-circuitpython-dht==4.0.12
+adafruit-blinka==9.2.0
+# Blinka still imports pkg_resources, which setuptools 81 and later no longer include
+setuptools>=66,<81
+# GPIO access for Blinka: RPi.GPIO on a Pi 3 / Pi 4 (fast enough to time a DHT; the Dockerfile compiles it),
+# lgpio on a Pi 5
+RPi.GPIO==0.7.1; platform_machine == "aarch64" or platform_machine == "armv7l"
+lgpio==0.2.2.0

@@ -124,7 +124,7 @@ locked down:
 | Linux capabilities | none | none | capturing or forging network traffic, changing network settings, reading files it doesn't own |
 | Filesystem | read-only, except its own `tankwatch.yaml` | read-only | changing its own code or leaving anything behind |
 | Gaining privileges | blocked (`no-new-privileges`) | blocked | a bug turning into root access |
-| Host files it can see | only the `node` folder (read-only, for disk use), its `tankwatch.yaml`, and `/sys/bus/w1` if you have probes | none | reading anything else on the Pi, including SSH keys (yours too) and password hashes: they aren't shared with it |
+| Host files it can see | only the `node` folder (read-only, for disk use), its `tankwatch.yaml`, `/sys/bus/w1` if you have probes, and with a DHT on a Pi 3 / Pi 4 a read-only copy of the Pi's `/proc/cpuinfo` (`node/cpuinfo`, so the GPIO library recognises the Pi) | none | reading anything else on the Pi, including SSH keys (yours too) and password hashes: they aren't shared with it |
 | Devices | `/dev/gpiomem` or `/dev/gpiochip*` only if a DHT is wired (plus the `gpio` group) | the HAT's SPI devices | |
 
 What host networking still allows: it can reach anything on your home network that the Pi can, including services

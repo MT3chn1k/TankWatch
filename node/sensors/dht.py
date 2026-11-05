@@ -4,12 +4,37 @@ options:
   model: dht11 | dht22   (default dht11)
   pin: D17               (board pin name; D17 = GPIO17 = physical pin 11)
 """
+import os
 import time
 
-import adafruit_dht
-import board
 
-from . import c_to_f
+def _container_gpio_settings():
+    """Fill in what the GPIO libraries normally read from /proc/device-tree, which Docker hides from containers.
+
+    Adafruit's board detection looks there to recognise the chip. /proc/cpuinfo is still visible and has the board's
+    revision code, which is enough for it to tell the board, once it knows it's a Raspberry Pi chip. Settings
+    already in the environment win."""
+    if os.path.exists("/proc/device-tree/model"):
+        return                                         # not in a container (or the tree is shared): nothing to do
+    revision = ""
+    try:
+        with open("/proc/cpuinfo") as f:
+            for line in f:
+                if line.startswith("Revision"):
+                    revision = line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    if revision:
+        os.environ.setdefault("BLINKA_FORCECHIP", "BCM2XXX")    # every Raspberry Pi; the board comes from the revision
+    os.environ.setdefault("LG_WD", "/tmp")             # lgpio's working files: the container's filesystem is read-only
+
+
+_container_gpio_settings()
+
+import adafruit_dht  # noqa: E402  (after the settings above, which these read on import)
+import board  # noqa: E402
+
+from . import c_to_f  # noqa: E402
 
 
 class Sensor:

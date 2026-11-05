@@ -137,6 +137,15 @@ if [[ "$DHT" =~ ^(11|22)$ ]]; then
 "
   if [ -e /dev/gpiomem ]; then OVERRIDE_DEVICES+="      - /dev/gpiomem
 "; fi                                                                       # Pi 3 / Pi 4
+  # On a Pi 3 / Pi 4 the DHT library (RPi.GPIO) recognises the Pi from /proc/device-tree, which Docker hides, or
+  # from a "Hardware" line in /proc/cpuinfo, which 64-bit kernels leave out. Give the container a copy of this
+  # Pi's cpuinfo with that line added, read-only. (A Pi 5 uses lgpio instead and needs none of this.)
+  MODEL=$(tr -d '\0' < /proc/device-tree/model 2>/dev/null || true)
+  if [[ "$MODEL" == "Raspberry Pi"* && "$MODEL" != "Raspberry Pi 5"* ]] && ! grep -q '^Hardware' /proc/cpuinfo; then
+    { cat /proc/cpuinfo; printf 'Hardware\t: BCM2835\n'; } > cpuinfo
+    OVERRIDE_VOLUMES+="      - ./cpuinfo:/proc/cpuinfo:ro
+"
+  fi
   for c in /dev/gpiochip0 /dev/gpiochip4; do [ -e $c ] && OVERRIDE_DEVICES+="      - $c
 "; done                                                                    # Pi 5
 fi

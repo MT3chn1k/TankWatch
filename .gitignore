@@ -13,6 +13,7 @@ hub/backups/
 hub/beacon/
 node/tankwatch.yaml
 node/docker-compose.override.yml
+node/cpuinfo
 lab/run/
 lab/.env
 display/.env
