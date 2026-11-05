@@ -194,8 +194,10 @@ $DOCKER compose up -d
 sleep 8
 $DOCKER compose logs --tail 15 node
 HUB_HOST=$(helper host "$HUB_URL")
+# the hub's beacon says which port its dashboards are on (3000 unless the hub changed it)
+GRAFANA_PORT=$(curl -s -m 3 "http://$HUB_HOST:8087/tankwatch.json" | python3 -c 'import json, sys; print(int(json.load(sys.stdin).get("grafana_port", 3000)))' 2>/dev/null || echo 3000)
 cat <<MSG
 
-Done. "$NAME" is sending readings to the hub. See them at http://$HUB_HOST:3000
+Done. "$NAME" is sending readings to the hub. See them at http://$HUB_HOST:$GRAFANA_PORT
 Watch this collector:  $DOCKER logs -f tankwatch-node
 MSG
