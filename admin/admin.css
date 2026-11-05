@@ -59,6 +59,13 @@ input, select { font: inherit; font-size: 14px; color: var(--text); background: 
 .svc { display: flex; flex-wrap: wrap; gap: 8px; }
 .svc span { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; font-size: 13px; }
 .svc .ok { border-color: var(--up); } .svc .bad { border-color: var(--down); color: var(--down); }
+.pairbar { display: flex; gap: 8px; max-width: 520px; margin-bottom: 10px; }
+.pairbar input { flex: 1; }
+.pair { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+.pair canvas { width: 240px; height: 240px; border-radius: 8px; image-rendering: pixelated; flex: none; }
+.pair-text { flex: 1; min-width: 240px; } .pair-text p { margin: 0 0 6px; }
+#phones .table-wrap table { min-width: 420px; }
 .links { margin-top: 12px; display: flex; gap: 16px; flex-wrap: wrap; }
 .banner { margin: 14px 24px 0; border: 1px solid var(--down); border-radius: 12px; padding: 10px 14px; color: var(--down); }
 #toast { position: fixed; right: 20px; bottom: 20px; background: var(--panel2); border: 1px solid var(--line); padding: 10px 14px;

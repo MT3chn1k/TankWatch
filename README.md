@@ -154,6 +154,12 @@ a DHT sensor and where each sensor is, tests every sensor once, and starts the c
 The status sign and Unicorn HAT Mini displays use the display join code: see [display/README.md](display/README.md)
 and [sign/README.md](sign/README.md).
 
+### Phone widget (optional add-on)
+
+A small read-only service for an Android home-screen widget, off unless you turn it on
+(`./setup.sh widget`). Pair each phone by scanning a QR code on the admin page. See
+[docs/phone-widget.md](docs/phone-widget.md), including how to see your tanks from away from home safely.
+
 ### 4. Keep it running
 
 `hub/backup.sh` backs up every reading and dashboard, and `hub/restore.sh` puts them back. Backups,
@@ -183,7 +189,7 @@ aquariums, with the status sign on a shelf. The packaged version here is new. Wh
 | Part | Tested on |
 |---|---|
 | Hub setup, dashboards, backup and restore | Docker on a PC, from a fresh clone |
-| Join codes, discovery, a collector finding a moved hub | The [test lab](docs/test-lab.md): 15 of 15 checks pass |
+| Join codes, discovery, a collector finding a moved hub | The [test lab](docs/test-lab.md): 37 of 37 checks pass (Docker 29 on RHEL 10, SELinux enforcing) |
 | Collector setup wizard | A Debian container on the lab network, with fake DS18B20 probes; re-runs keep the config unchanged |
 | Collector agent in Docker | Docker on a PC, with the `synthetic`, `mock` and `node_health` sensors |
 | Unicorn HAT Mini display | Its web version in the test lab. The real HAT: next, on a Raspberry Pi 4 |
@@ -193,6 +199,7 @@ aquariums, with the status sign on a shelf. The packaged version here is new. Wh
 | Status sign | This version: its screens and shows on a PC simulator against a real hub. The original, home-specific version it came from runs the real sign every day |
 | Admin page | Against a real InfluxDB with sample collectors (healthy, amber, silent, new), in Chrome. The home setup has run its own version of it for weeks |
 | Hub on a Raspberry Pi 5 in Docker | Not yet: the home hub runs the same InfluxDB and Grafana without Docker |
+| Phone widget service (add-on) | The test lab (19 of its checks): only paired phones answered, statuses agree with the admin page, pairing and revoking from the admin page, cross-site requests refused, management port not published. Also against sample readings for every case (healthy, hot, cold, stale, warning, silent) and the wrong-token lockout. The pairing QR code decodes to the exact link. The Android app: next |
 
 If you try a combination that isn't in this list, please open an issue with what worked and what didn't.
 
@@ -204,6 +211,8 @@ If you try a combination that isn't in this list, please open an issue with what
 - [x] Test lab: a whole install in Docker with synthetic sensors and virtual displays
 - [x] Unicorn HAT Mini display (tested in its web version)
 - [x] Admin page on the hub: collector status, adding a sensor Pi, status sign config builder
+- [ ] **Phone widget** (optional add-on): hub service and pairing by QR code on the admin page done; next,
+      healthy ranges per location, and the Android app
 - [ ] Alerts (Grafana alerting to email / phone) with sensible defaults per sensor
 - [ ] pH, TDS, soil moisture, level sensors
 - [ ] Network traffic mapping per node (NetFlow)

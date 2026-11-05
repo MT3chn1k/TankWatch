@@ -5,7 +5,8 @@ Runs on the hub next to InfluxDB and Grafana (see hub/docker-compose.yml): http:
 It's password protected (ADMIN_PASSWORD in hub/.env, printed by hub/setup.sh) because it can show the join codes.
 
 It only reads: queries go to InfluxDB with the read-only token, and nothing on the hub is changed. The sign
-config it builds is made in your browser for you to download. Standard library only.
+config it builds is made in your browser for you to download. The one exception is the optional phone widget
+add-on: it can ask the widget service to pair or revoke a phone (see widget/widget.py). Standard library only.
 
 Settings come from environment variables (hub/docker-compose.yml passes them from hub/.env):
   ADMIN_PASSWORD        the page's password (user name: admin)
@@ -17,8 +18,11 @@ Settings come from environment variables (hub/docker-compose.yml passes them fro
                         used to reach this page, or HUB_DETECTED_ADDRESS (what setup.sh found)
   ADMIN_PORT            default 8088
   INFLUX_PUBLIC_PORT, GRAFANA_PUBLIC_PORT   the ports other devices use (hub/.env INFLUX_PORT, GRAFANA_PORT)
+  WIDGET_ADMIN_TOKEN    lets this page pair and revoke phones through the widget service (set by setup.sh)
+  WIDGET_MANAGE_URL     the widget service's internal management address (default http://widget:8099)
+  WIDGET_PUBLIC_PORT    the port phones use for the widget service (hub/.env WIDGET_PORT)
 """
-import base64, csv, hmac, io, ipaddress, json, logging, os, re, signal, sys, threading, time, urllib.parse, urllib.request
+import base64, csv, hmac, io, ipaddress, json, logging, os, re, signal, sys, threading, time, urllib.error, urllib.parse, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s admin: %(message)s")
@@ -37,7 +41,7 @@ PUBLIC = {"influx": int(E("INFLUX_PUBLIC_PORT", "8086")), "grafana": int(E("GRAF
 SILENT_S, HOT_C, NEW_S = 90, 77, 3600     # same rules as the displays: silent 90 s = down; CPU over 77 °C = hot
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/admin.js": ("admin.js", "text/javascript; charset=utf-8"),
           "/admin.css": ("admin.css", "text/css; charset=utf-8"),
-          "/icon.png": ("icon.png", "image/png")}
+          "/icon.png": ("icon.png", "image/png"), "/qrcode.js": ("qrcode.js", "text/javascript; charset=utf-8")}
 HOSTNAME = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
 
 
@@ -171,6 +175,44 @@ def join_address(host_header):
     return host if usable else E("HUB_DETECTED_ADDRESS", "") or "this-host"
 
 
+# ------------------------------------------------------------------------------------------------ phone widget
+# The widget service (an optional add-on) keeps the paired phones. This page asks it to pair, list and revoke over
+# its management port, which is only reachable inside the hub's Docker network and needs WIDGET_ADMIN_TOKEN.
+# This page never sees a phone's token after showing the pairing link once.
+WIDGET_MANAGE = E("WIDGET_MANAGE_URL", "http://widget:8099").rstrip("/")
+WIDGET_ADMIN_TOKEN = E("WIDGET_ADMIN_TOKEN", "")
+WIDGET_PUBLIC_PORT = int(E("WIDGET_PUBLIC_PORT", "8089"))
+
+
+def widget_call(path, body=None):
+    """(HTTP status, JSON) from the widget service's management port. Raises OSError if it isn't running."""
+    req = urllib.request.Request(WIDGET_MANAGE + path, method="POST" if body is not None else "GET",
+                                 data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Authorization": "Bearer " + WIDGET_ADMIN_TOKEN, "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=5) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        try:
+            return e.code, json.loads(e.read())
+        except ValueError:
+            return e.code, {}
+
+
+def widget_status(host_header):
+    """What the admin page's Phone widget section shows."""
+    if not WIDGET_ADMIN_TOKEN:
+        return {"enabled": False, "why": "setup"}
+    try:
+        code, j = widget_call("/manage/devices")
+    except OSError:
+        return {"enabled": False, "why": "off"}
+    if code != 200:
+        return {"enabled": False, "why": "token"}
+    return {"enabled": True, "devices": j.get("devices", []), "remote": j.get("remote", ""),
+            "home": "http://%s:%d" % (join_address(host_header), WIDGET_PUBLIC_PORT)}
+
+
 def join_code(role, token, address):
     d = {"v": 1, "id": E("HUB_ID", ""), "u": "http://%s:%d" % (address, PUBLIC["influx"]), "o": ORG, "b": BUCKET, "r": role, "t": token}
     raw = json.dumps(d, separators=(",", ":")).encode()
@@ -257,6 +299,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, f.read(), ctype)
             if path == "/api/overview":
                 return self.send(200, overview())
+            if path == "/api/widget":
+                return self.send(200, widget_status(self.headers.get("Host")))
             if path == "/api/join":
                 addr = join_address(self.headers.get("Host"))
                 return self.send(200, {"address": addr,
@@ -267,10 +311,46 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(500, {"error": type(e).__name__})
         self.send(404, {"error": "not found"})
 
+    def same_site(self):
+        """Refuse requests another website could make your browser send: they need our own header and JSON, and if
+        the browser says where the request came from, it must be this page."""
+        if self.headers.get("X-TankWatch-Admin") != "1":
+            return False
+        if not (self.headers.get("Content-Type") or "").startswith("application/json"):
+            return False
+        origin = self.headers.get("Origin")
+        if origin:
+            return urllib.parse.urlsplit(origin).netloc == (self.headers.get("Host") or "")
+        return True
+
     def do_POST(self):
+        # The only changes this page can make: pairing and revoking phones for the widget add-on.
+        path = self.path.split("?", 1)[0]
+        if path not in ("/api/widget/pair", "/api/widget/revoke"):
+            return self.send(405, {"error": "this page only reads"}, extra=[("Allow", "GET")])
+        if not self.authorized():
+            return
+        if not self.same_site():
+            log.warning("refused a cross-site request for %s from %s", path, self.client_address[0])
+            return self.send(403, {"error": "refused: not from the admin page"})
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            body = json.loads(self.rfile.read(n) or b"{}") if 0 < n <= 4096 else {}
+            if path == "/api/widget/pair":
+                home = "http://%s:%d" % (join_address(self.headers.get("Host")), WIDGET_PUBLIC_PORT)
+                code, j = widget_call("/manage/pair", {"name": str(body.get("name") or ""), "home": home})
+            else:
+                code, j = widget_call("/manage/revoke", {"id": str(body.get("id") or "")})
+            return self.send(code, j)
+        except OSError:
+            return self.send(503, {"error": "The phone widget service isn't running"})
+        except ValueError:
+            return self.send(400, {"error": "bad request"})
+
+    def do_PUT(self):
         self.send(405, {"error": "this page only reads"}, extra=[("Allow", "GET")])
 
-    do_PUT = do_DELETE = do_PATCH = do_POST
+    do_DELETE = do_PATCH = do_PUT
 
 
 if __name__ == "__main__":

@@ -5,11 +5,11 @@ cd "$(dirname "$0")"
 docker compose down 2>/dev/null || true
 if [ -d run/hub ]; then
   if [ "${1:-}" = --wipe ]; then
-    (cd run/hub && COMPOSE_PROJECT_NAME=tw-lab-hub docker compose down -v)
-    rm -f run/hub/.env run/hub-setup.log .env
+    (cd run/hub && COMPOSE_PROJECT_NAME=tw-lab-hub docker compose --profile widget down -v)
+    rm -f run/hub/.env run/hub-setup.log run/widget-token .env
     echo "lab stopped and wiped"
   else
-    (cd run/hub && COMPOSE_PROJECT_NAME=tw-lab-hub docker compose down)
+    (cd run/hub && COMPOSE_PROJECT_NAME=tw-lab-hub docker compose --profile widget down)
     echo "lab stopped (data kept; ./stop.sh --wipe to delete it)"
   fi
 fi

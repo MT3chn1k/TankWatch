@@ -75,8 +75,45 @@ services:
       HUB_DETECTED_ADDRESS: ${HUB_DETECTED_ADDRESS:-}
       INFLUX_PUBLIC_PORT: ${INFLUX_PORT:-8086}       # the ports other devices use, for join codes and links
       GRAFANA_PUBLIC_PORT: ${GRAFANA_PORT:-3000}
+      WIDGET_PUBLIC_PORT: ${WIDGET_PORT:-8089}
+      WIDGET_ADMIN_TOKEN: ${WIDGET_ADMIN_TOKEN:-}    # pairs and revokes phones through the widget service, if it's on
+
+  # Phone widget service (optional add-on, off unless you turn it on with ./setup.sh widget, which adds
+  # COMPOSE_PROFILES=widget to .env). A read-only summary for the TankWatch phone widget, http://<hub>:8089.
+  # Only paired phones get an answer; pair them on the admin page. It reads with the read-only token.
+  # Its management port (8099) is NOT published: only the admin page reaches it, inside this Docker network.
+  # See docs/phone-widget.md, including how to reach it from away from home safely.
+  widget:
+    profiles: ["widget"]
+    build: ../widget
+    image: tankwatch-widget
+    restart: unless-stopped
+    ports: ["${WIDGET_PORT:-8089}:8089"]
+    depends_on:
+      influxdb: {condition: service_healthy}
+    user: "65534:65534"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    volumes:
+      - widget-data:/data             # paired phones (tokens stored as hashes)
+    environment:
+      INFLUX_ORG: ${INFLUX_ORG:-tankwatch}
+      INFLUX_BUCKET: ${INFLUX_BUCKET:-sensors}
+      INFLUX_READ_TOKEN: ${INFLUX_READ_TOKEN:-}
+      HUB_ID: ${HUB_ID:-}
+      HUB_NAME: ${HUB_NAME:-}
+      HUB_ADDRESS: ${HUB_ADDRESS:-}
+      HUB_DETECTED_ADDRESS: ${HUB_DETECTED_ADDRESS:-}
+      WIDGET_PUBLIC_PORT: ${WIDGET_PORT:-8089}
+      WIDGET_REMOTE_URL: ${WIDGET_REMOTE_URL:-}
+      WIDGET_DETECTED_REMOTE_URL: ${WIDGET_DETECTED_REMOTE_URL:-}
+      WIDGET_ADMIN_TOKEN: ${WIDGET_ADMIN_TOKEN:-}
+      WATER_RANGE_F: ${WATER_RANGE_F:-74,82}
+      AIR_RANGE_F: ${AIR_RANGE_F:-68,80}
 
 volumes:
   influxdb-data:
   influxdb-config:
   grafana-data:
+  widget-data:

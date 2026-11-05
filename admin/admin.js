@@ -150,6 +150,68 @@ $("start-watch").onclick = () => {
   }, 5000);
 };
 
+// ---- phone widget (optional add-on): pair and revoke phones through the widget service
+const DOCS = "https://github.com/MT3chn1k/TankWatch/blob/main/docs/phone-widget.md";
+let pairTimer = null;
+async function post(path, body) {   // our own header + JSON: the hub refuses changes other websites could send
+  const r = await fetch(api(path), { method: "POST", cache: "no-store", body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json", "X-TankWatch-Admin": "1" } });
+  let j = {}; try { j = await r.json(); } catch (e) { /* not JSON */ }
+  if (!r.ok) throw new Error(j.error || "HTTP " + r.status);
+  return j;
+}
+function drawQR(text) {   // dark on white with a quiet zone, whatever the page's colors: cameras read it best
+  const q = qrcode(0, "M"); q.addData(text); q.make();
+  const n = q.getModuleCount(), quiet = 4, scale = Math.max(4, Math.floor(296 / (n + 2 * quiet)));
+  const c = $("pair-qr"), size = (n + 2 * quiet) * scale, g = c.getContext("2d");
+  c.width = c.height = size;
+  g.fillStyle = "#fff"; g.fillRect(0, 0, size, size); g.fillStyle = "#000";
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (q.isDark(y, x)) g.fillRect((x + quiet) * scale, (y + quiet) * scale, scale, scale);
+}
+function hidePairing() {
+  clearTimeout(pairTimer); $("pair-result").hidden = true; $("pair-link").textContent = "";
+  const c = $("pair-qr"); c.width = c.height = 1;
+}
+async function loadWidget() {
+  let w;
+  try { const r = await fetch(api("/api/widget"), { cache: "no-store" }); w = await r.json(); } catch (e) { return; }
+  $("widget-on").hidden = !w.enabled; $("widget-off").hidden = w.enabled;
+  if (!w.enabled) {
+    $("widget-off").innerHTML = (w.why === "token"
+      ? "The phone widget service didn't accept this page's key. On the hub, run <code>./setup.sh</code> again."
+      : "The phone widget add-on is off. To turn it on, on the hub run <code>./setup.sh widget</code>.") +
+      ` <a href="${DOCS}" target="_blank" rel="noopener">What it is</a>`;
+    return;
+  }
+  $("remote-note").innerHTML = w.remote
+    ? `At home, phones use <code>${esc(w.home)}</code>; away from home, <code>${esc(w.remote)}</code>.`
+    : `Phones use <code>${esc(w.home)}</code>, so the widget works on your home network only. To see your tanks from away,
+       <a href="${DOCS}#seeing-your-tanks-from-away-from-home" target="_blank" rel="noopener">add Tailscale</a> and pair again.`;
+  $("phone-rows").innerHTML = w.devices.map((d) => `<tr><td><b>${esc(d.name)}</b></td><td class="small">${esc(new Date(d.created * 1000).toLocaleDateString())}</td>
+      <td class="small">${d.last_seen ? ago(d.last_seen) : '<span class="muted">not yet</span>'}</td>
+      <td><button type="button" class="revoke" data-id="${esc(d.id)}" data-name="${esc(d.name)}">Revoke</button></td></tr>`).join("")
+    || '<tr><td colspan="4" class="muted">No phones paired yet.</td></tr>';
+}
+$("pair-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target, name = f.name.value.trim();
+  if (!name) return;
+  try {
+    const j = await post("/api/widget/pair", { name });
+    drawQR(j.link); $("pair-link").textContent = j.link; $("pair-result").hidden = false; f.reset();
+    if (/\/\/(this-host|localhost|127\.)/.test(j.link)) toast("Open this page by the hub's network address so the phone can find it");
+    clearTimeout(pairTimer); pairTimer = setTimeout(hidePairing, 5 * 60 * 1000);
+    loadWidget();
+  } catch (err) { toast("Couldn't pair: " + err.message); }
+});
+$("pair-hide").onclick = hidePairing;
+$("phone-rows").addEventListener("click", async (e) => {
+  const b = e.target.closest("button.revoke");
+  if (!b || !confirm(`Revoke ${b.dataset.name}? Its widget stops working at once.`)) return;
+  try { await post("/api/widget/revoke", { id: b.dataset.id }); toast("Revoked " + b.dataset.name); loadWidget(); }
+  catch (err) { toast("Couldn't revoke: " + err.message); }
+});
+
 async function load() {
   try {
     const r = await fetch(api("/api/overview"), { cache: "no-store" });
@@ -157,7 +219,7 @@ async function load() {
     data = await r.json();
   } catch (e) { const err = $("error"); err.hidden = false; err.textContent = "The admin page isn't answering. Is the hub running?"; return; }
   $("updated").textContent = "updated " + new Date(data.time * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
-  renderHub(); renderCollectors(); renderSources(); renderSignForm();
+  renderHub(); renderCollectors(); renderSources(); renderSignForm(); loadWidget();
 }
 $("refresh").onclick = load;
 load();

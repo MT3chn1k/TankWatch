@@ -12,7 +12,7 @@
 <header>
   <h1><img src="icon.png" alt="" width="32" height="32" class="logo">TankWatch Admin</h1>
   <nav><a href="#collectors">Collectors</a><a href="#add">Add a sensor Pi</a><a href="#sources">Readings</a>
-    <a href="#displays">Displays</a><a href="#sign">Sign config</a><a href="#hub">Hub</a></nav>
+    <a href="#displays">Displays</a><a href="#phones">Phone widget</a><a href="#sign">Sign config</a><a href="#hub">Hub</a></nav>
   <span class="spacer"></span>
   <span id="hub-name" class="badge">loading…</span>
   <span id="updated" class="muted small"></span>
@@ -74,6 +74,34 @@ cd tankwatch/node
     </div>
   </section>
 
+  <section id="phones">
+    <h2>Phone widget <small>optional add-on: every tank's health on an Android home screen</small></h2>
+    <p id="widget-off" class="muted" hidden></p>
+    <div id="widget-on" hidden>
+      <form id="pair-form" class="pairbar">
+        <input name="name" maxlength="40" required placeholder="Phone name, e.g. Sam's phone" aria-label="phone name">
+        <button type="submit" class="primary">Pair a phone</button>
+      </form>
+      <div id="pair-result" class="pair" hidden>
+        <canvas id="pair-qr" width="1" height="1" aria-label="pairing QR code"></canvas>
+        <div class="pair-text">
+          <p><b>Scan this with the phone's camera</b>, with the TankWatch app installed. Or copy the link below and open it
+            on the phone.</p>
+          <pre id="pair-link" class="cmd code" title="click to copy"></pre>
+          <p class="muted small">This code is the phone's password for the widget: it's shown only this once, and hides
+            itself in 5 minutes. Don't screenshot or send it anywhere but that phone. Lost it? Revoke the phone and pair it
+            again.</p>
+          <button id="pair-hide" type="button">Done</button>
+        </div>
+      </div>
+      <p id="remote-note" class="muted small"></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Phone</th><th>Paired</th><th>Last seen</th><th></th></tr></thead>
+        <tbody id="phone-rows"></tbody>
+      </table></div>
+    </div>
+  </section>
+
   <section id="sign">
     <h2>Status sign config <small>builds the sign's config.json from what this hub knows</small></h2>
     <form id="sign-form" class="panel">
@@ -104,6 +132,7 @@ cd tankwatch/node
   </section>
 </main>
 <div id="toast" role="status"></div>
+<script src="qrcode.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>

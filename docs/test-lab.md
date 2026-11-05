@@ -10,6 +10,7 @@ path, not a shortcut.
 | Machine | Plays the part of | What's on it |
 |---|---|---|
 | hub | the central Pi | InfluxDB, Grafana and the discovery beacon, set up by the real `hub/setup.sh` |
+| (hub) widget | the optional phone widget service | started with `--profile widget`; `start.sh` pairs a "lab phone" (token in `lab/run/widget-token`) and `check.py` checks it answers only that phone and agrees with the admin page |
 | hub-pi | the collector on the hub machine | its own health only, so the hub gets a status light |
 | livingroom-pi | a data Pi | a cichlid tank and the living room (temperature, humidity) |
 | upstairs-pi | a data Pi | a 75-gallon tank and a fiddle-leaf fig (soil moisture) |

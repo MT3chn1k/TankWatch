@@ -20,8 +20,16 @@ Within that model, TankWatch limits the damage of a lost device or a leaked code
   gain privileges**, and the collector runs as an ordinary user. See
   [docs/setup-and-discovery.md](docs/setup-and-discovery.md#what-the-containers-can-and-cant-do).
 - The **admin page** (port 8088) needs a password (`ADMIN_PASSWORD` in `hub/.env`) because it can show the join
-  codes. It only reads: it queries with the read-only token and can't change the hub. After 10 wrong passwords
-  from one address it stops answering that address for 10 minutes.
+  codes. It only reads: it queries with the read-only token and can't change the hub. The one exception is the
+  optional phone widget: it can pair and revoke phones, which needs the password and is refused if another website
+  tries to make your browser do it. After 10 wrong passwords from one address it stops answering that address for
+  10 minutes.
+- The **phone widget service** (port 8089, an optional add-on that's off unless you turn it on) only reads a
+  summary, with the read-only token. It answers only phones paired with their own token (stored as a hash, and
+  revocable one phone at a time); every other request gets "not found", and an address is ignored for
+  10 minutes after 20 wrong tokens. It's the **one** part of TankWatch that may be reached from away from home
+  without a VPN on the phone, through Tailscale Funnel or your own HTTPS proxy, and only that port. See
+  [docs/phone-widget.md](docs/phone-widget.md#seeing-your-tanks-from-away-from-home).
 - Secrets live in files only their owner can read (`hub/.env`, `node/tankwatch.yaml`), which git ignores.
 
 The known limits, including how a device on your network could impersonate the hub, are listed in
