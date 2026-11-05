@@ -1,6 +1,14 @@
+<p align="center">
+  <img src="docs/images/tankwatch-icon.png" alt="TankWatch logo: a banded loach over driftwood and plants" width="140">
+</p>
+
 # TankWatch
 
 **Tracking anything you can buy an open sensor for.**
+
+<p align="center">
+  <a href="docs/media/tankwatch-logo.mp4"><img src="docs/media/tankwatch-logo.gif" alt="Animation: three fish tanks with sensor Pis send readings to the hub, dashboards draw them, and everything merges into the TankWatch logo" width="720"></a>
+</p>
 
 TankWatch started as a way to watch three fish tanks with Raspberry Pis. It works for anything a cheap,
 open sensor can measure: aquariums, house plants, a pet feeder's food level, a room, a garage freezer.

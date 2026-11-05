@@ -36,7 +36,8 @@ PUBLIC = {"influx": int(E("INFLUX_PUBLIC_PORT", "8086")), "grafana": int(E("GRAF
 
 SILENT_S, HOT_C, NEW_S = 90, 77, 3600     # same rules as the displays: silent 90 s = down; CPU over 77 °C = hot
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/admin.js": ("admin.js", "text/javascript; charset=utf-8"),
-          "/admin.css": ("admin.css", "text/css; charset=utf-8")}
+          "/admin.css": ("admin.css", "text/css; charset=utf-8"),
+          "/icon.png": ("icon.png", "image/png")}
 HOSTNAME = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
 
 

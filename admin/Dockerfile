@@ -1,7 +1,7 @@
 FROM python:3.12-slim-bookworm
 # The admin page: standard library only, nothing to install.
 WORKDIR /app
-COPY admin.py index.html admin.js admin.css ./
+COPY admin.py index.html admin.js admin.css icon.png ./
 ENV PYTHONUNBUFFERED=1
 USER 65534:65534
 EXPOSE 8088
