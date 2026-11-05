@@ -4,7 +4,7 @@ services:
   influxdb:
     image: influxdb:2.7.11
     restart: unless-stopped
-    ports: ["8086:8086", "8087:8087"]   # 8087 is the discovery beacon, which shares this container's address
+    ports: ["${INFLUX_PORT:-8086}:8086", "8087:8087"]   # 8087 is the discovery beacon (always 8087), sharing this address
     volumes:
       - influxdb-data:/var/lib/influxdb2
       - influxdb-config:/etc/influxdb2
@@ -24,7 +24,7 @@ services:
   grafana:
     image: grafana/grafana-oss:11.6.0
     restart: unless-stopped
-    ports: ["3000:3000"]
+    ports: ["${GRAFANA_PORT:-3000}:3000"]
     depends_on:
       influxdb: {condition: service_healthy}
     volumes:
@@ -56,7 +56,7 @@ services:
     build: ../admin
     image: tankwatch-admin
     restart: unless-stopped
-    ports: ["8088:8088"]
+    ports: ["${ADMIN_PORT:-8088}:8088"]
     depends_on:
       influxdb: {condition: service_healthy}
     user: "65534:65534"
@@ -73,6 +73,8 @@ services:
       HUB_NAME: ${HUB_NAME:-}
       HUB_ADDRESS: ${HUB_ADDRESS:-}
       HUB_DETECTED_ADDRESS: ${HUB_DETECTED_ADDRESS:-}
+      INFLUX_PUBLIC_PORT: ${INFLUX_PORT:-8086}       # the ports other devices use, for join codes and links
+      GRAFANA_PUBLIC_PORT: ${GRAFANA_PORT:-3000}
 
 volumes:
   influxdb-data:

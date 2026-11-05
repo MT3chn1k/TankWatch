@@ -66,8 +66,8 @@ function renderHub() {
   $("hub-name").textContent = "hub " + (data.hub.name || data.hub.id || "?");
   $("services").innerHTML = Object.entries(data.services).map(([k, ok]) => `<span class="${ok ? "ok" : "bad"}">${esc(k)}: ${ok ? "answering" : "not answering"}</span>`).join("");
   const host = location.hostname;
-  $("links").innerHTML = [["Dashboards (Grafana)", 3000], ["InfluxDB", 8086]]
-    .map(([n, p]) => `<a href="http://${esc(host)}:${p}/" target="_blank" rel="noopener">${n}</a>`).join("") +
+  $("links").innerHTML = [["Dashboards (Grafana)", data.hub.ports.grafana], ["InfluxDB", data.hub.ports.influx]]
+    .map(([n, p]) => `<a href="http://${esc(host)}:${+p}/" target="_blank" rel="noopener">${n}</a>`).join("") +
     '<a href="https://github.com/MT3chn1k/TankWatch/blob/main/docs/operating-the-hub.md" target="_blank" rel="noopener">Backups, upgrades, troubleshooting</a>';
   const err = $("error"); err.hidden = !data.error; err.textContent = data.error || "";
 }
@@ -104,7 +104,7 @@ function signConfig() {
     if (r.kind === "hub") { o.hub = true; o.icon = "heart"; } else o.icon = "fish";
     return o;
   });
-  return { hub_url: `http://${location.hostname}:8086`, org: data.hub.org, bucket: data.hub.bucket,
+  return { hub_url: `http://${location.hostname}:${data.hub.ports.influx}`, org: data.hub.org, bucket: data.hub.bucket,
     wifi_country: (f.country.value || "US").toUpperCase(), nodes, air_location: f.air.value, water_location: f.water.value,
     air_range_f: [n("alo"), n("ahi")], water_range_f: [n("wlo"), n("whi")], hot_cpu_c: n("hot") };
 }

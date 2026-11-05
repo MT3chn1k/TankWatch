@@ -28,11 +28,14 @@ lan_ip() { # this machine's address on the home network
   is_ip "$ip" && echo "$ip" || echo "this-host"
 }
 
+port() { v=$(get "$1"); echo "${v:-$2}"; }   # port NAME DEFAULT: a port from .env, or its default
+IPORT() { port INFLUX_PORT 8086; }; GPORT() { port GRAFANA_PORT 3000; }; APORT() { port ADMIN_PORT 8088; }
+
 b64url() { base64 | tr -d '\n=' | tr '+/' '-_'; }
 
 join_code() { # join_code ROLE TOKEN: everything a collector (or display) needs, in one line
-  printf '{"v":1,"id":"%s","u":"http://%s:8086","o":"%s","b":"%s","r":"%s","t":"%s"}' \
-    "$(get HUB_ID)" "$(lan_ip)" "$(get INFLUX_ORG)" "$(get INFLUX_BUCKET)" "$1" "$2" | b64url | sed 's/^/tw1./'
+  printf '{"v":1,"id":"%s","u":"http://%s:%s","o":"%s","b":"%s","r":"%s","t":"%s"}' \
+    "$(get HUB_ID)" "$(lan_ip)" "$(IPORT)" "$(get INFLUX_ORG)" "$(get INFLUX_BUCKET)" "$1" "$2" | b64url | sed 's/^/tw1./'
 }
 
 print_codes() {
@@ -40,8 +43,8 @@ print_codes() {
   cat <<MSG
 
 TankWatch hub "$(get HUB_NAME)" is running at $ip
-  Dashboards: http://$ip:3000   user $(get GRAFANA_ADMIN_USER), password $(get GRAFANA_ADMIN_PASSWORD)
-  Admin page: http://$ip:8088   user admin, password $(get ADMIN_PASSWORD)
+  Dashboards: http://$ip:$(GPORT)   user $(get GRAFANA_ADMIN_USER), password $(get GRAFANA_ADMIN_PASSWORD)
+  Admin page: http://$ip:$(APORT)   user admin, password $(get ADMIN_PASSWORD)
               (collector status, adding a sensor Pi, the status sign's config)
 
 Join code for collectors (sensor Pis). Paste it when node/setup.sh asks:
@@ -69,8 +72,8 @@ put HUB_NAME "$(hostname 2>/dev/null || echo tankwatch-hub)"
 
 # The beacon only says "a TankWatch hub lives here" and which hub it is. No tokens or passwords.
 mkdir -p beacon
-printf '{"tankwatch": "hub", "v": 1, "id": "%s", "name": "%s", "influx_port": 8086, "grafana_port": 3000}\n' \
-  "$(get HUB_ID)" "$(get HUB_NAME)" > beacon/tankwatch.json
+printf '{"tankwatch": "hub", "v": 1, "id": "%s", "name": "%s", "influx_port": %s, "grafana_port": %s}\n' \
+  "$(get HUB_ID)" "$(get HUB_NAME)" "$(IPORT)" "$(GPORT)" > beacon/tankwatch.json
 
 docker compose up -d --quiet-pull influxdb
 printf "waiting for InfluxDB"
@@ -92,11 +95,11 @@ docker compose up -d --quiet-pull --build
 
 # Check the hub answers on its network address, not just on this machine
 ip=$(lan_ip)
-for port in 8086 8087 3000 8088; do                 # give each up to 30 s: Grafana takes a moment to start
+for port in $(IPORT) 8087 $(GPORT) $(APORT); do                 # give each up to 30 s: Grafana takes a moment to start
   n=0; until curl -s -m 3 -o /dev/null "http://$ip:$port/" || [ $n -ge 10 ]; do n=$((n + 1)); sleep 3; done
   if [ $n -ge 10 ]; then
     echo "WARNING: nothing answered on $ip:$port. Other devices won't reach the hub until that works."
-    echo "         Check this machine's firewall allows Docker on ports 8086, 8087, 3000 and 8088."
+    echo "         Check this machine's firewall allows Docker on ports $(IPORT), 8087, $(GPORT) and $(APORT)."
   fi
 done
 print_codes

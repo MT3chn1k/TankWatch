@@ -16,6 +16,7 @@ Settings come from environment variables (hub/docker-compose.yml passes them fro
   HUB_ADDRESS           the address to put in join codes (hub/.env override); otherwise the address your browser
                         used to reach this page, or HUB_DETECTED_ADDRESS (what setup.sh found)
   ADMIN_PORT            default 8088
+  INFLUX_PUBLIC_PORT, GRAFANA_PUBLIC_PORT   the ports other devices use (hub/.env INFLUX_PORT, GRAFANA_PORT)
 """
 import base64, csv, hmac, io, ipaddress, json, logging, os, re, signal, sys, threading, time, urllib.parse, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -31,6 +32,7 @@ GRAFANA = E("GRAFANA_URL", "http://grafana:3000").rstrip("/")
 BEACON = E("BEACON_URL", "http://influxdb:8087").rstrip("/")
 ORG, BUCKET = E("INFLUX_ORG", "tankwatch"), E("INFLUX_BUCKET", "sensors")
 PASSWORD = E("ADMIN_PASSWORD", "")
+PUBLIC = {"influx": int(E("INFLUX_PUBLIC_PORT", "8086")), "grafana": int(E("GRAFANA_PUBLIC_PORT", "3000"))}
 
 SILENT_S, HOT_C, NEW_S = 90, 77, 3600     # same rules as the displays: silent 90 s = down; CPU over 77 °C = hot
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/admin.js": ("admin.js", "text/javascript; charset=utf-8"),
@@ -138,7 +140,7 @@ def overview():
     with _lock:
         if not _cache["data"] or time.time() - _cache["at"] > 5:
             data = {"time": int(time.time()), "hub": {"id": E("HUB_ID", ""), "name": E("HUB_NAME", ""),
-                                                      "org": ORG, "bucket": BUCKET},
+                                                      "org": ORG, "bucket": BUCKET, "ports": PUBLIC},
                     "services": {"InfluxDB": reachable(INFLUX + "/health", b'"pass"'),
                                  "Grafana": reachable(GRAFANA + "/api/health", b'"database"'),
                                  "Discovery beacon": reachable(BEACON + "/tankwatch.json", b'"tankwatch"')},
@@ -169,7 +171,7 @@ def join_address(host_header):
 
 
 def join_code(role, token, address):
-    d = {"v": 1, "id": E("HUB_ID", ""), "u": "http://%s:8086" % address, "o": ORG, "b": BUCKET, "r": role, "t": token}
+    d = {"v": 1, "id": E("HUB_ID", ""), "u": "http://%s:%d" % (address, PUBLIC["influx"]), "o": ORG, "b": BUCKET, "r": role, "t": token}
     raw = json.dumps(d, separators=(",", ":")).encode()
     return "tw1." + base64.urlsafe_b64encode(raw).decode().rstrip("=")
 

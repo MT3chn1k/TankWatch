@@ -76,6 +76,10 @@ Collectors and displays: `git pull`, then `docker compose up -d --build` in `nod
 | 8087 | Discovery beacon | Collectors and displays finding the hub (serves only the hub's id and name) |
 | 8088 | Admin page | You, in a browser (user `admin`, `ADMIN_PASSWORD` from `hub/.env`) |
 
+Something else on the machine already using 8086, 3000 or 8088? Set `INFLUX_PORT`, `GRAFANA_PORT` or `ADMIN_PORT`
+in `hub/.env` and run `./setup.sh` again. It puts the new InfluxDB port in the join codes and the beacon, so
+collectors and displays follow. The beacon must stay on 8087: that's where devices look for the hub.
+
 ## When something's wrong
 
 | Symptom | Check |
