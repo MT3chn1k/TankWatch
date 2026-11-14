@@ -9,7 +9,7 @@ Everything goes into one InfluxDB bucket, `sensors` (org `tankwatch`). Each read
 |---|---|---|
 | `node` | `node:` in the collector's `tankwatch.yaml` (setup.sh asks; default the Pi's host name) | `kitchen-pi` |
 | `location` | `location:` for that sensor in `tankwatch.yaml` | `75-gallon` |
-| `sensor` | The sensor type | `ds18b20`, `dht11` |
+| `sensor` | The sensor type | `ds18b20`, `dht11`, `sht4x` |
 
 Anything under `tags:` for a sensor in `tankwatch.yaml` is added too.
 
@@ -18,7 +18,7 @@ Anything under `tags:` for a sensor in `tankwatch.yaml` is added too.
 | Measurement | From | Fields | Extra tags |
 |---|---|---|---|
 | `water` | `ds18b20` | `temp_c`, `temp_f` | `probe` (the probe's serial), `probe_name` |
-| `air` | `dht` | `temp_c`, `temp_f`, `humidity` (%) | |
+| `air` | `dht`, `sht4x` | `temp_c`, `temp_f`, `humidity` (%) | |
 | `soil` | `synthetic` (plant); future soil sensors | `moisture_pct` | |
 | `level` | `synthetic` (feeder); future level sensors | `level_pct` | |
 | `node_health` | `node_health` | `temp_c`, `temp_f` (CPU), `load1`, `mem_used_pct`, `disk_used_pct`; on a Raspberry Pi also `undervolt_now`, `throttled_now`, `freqcap_now`, `templimit_now` and their `*_occurred` versions (0/1), `throttled_raw`, `core_v`, and `ext5v_v` (Pi 5) | |

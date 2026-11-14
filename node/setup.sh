@@ -150,6 +150,25 @@ if [[ "$DHT" =~ ^(11|22)$ ]]; then
 "; done                                                                    # Pi 5
 fi
 
+# SHT40/41/45 air sensor on I2C: found by trying it, so nothing to ask unless one answers
+SHT=""
+[ -e /dev/i2c-1 ] && SHT=$(helper sht4x 1 2>/dev/null || true)
+if [ -n "$SHT" ]; then
+  read -r ADDR READING <<< "$SHT"
+  prev=$(helper previous tankwatch.yaml sht4x-location)
+  loc=$(ask "  Found an SHT4x air sensor on I2C ($ADDR) reading $READING. Where is it" "${prev:-room}")
+  SENSORS+="  - type: sht4x              # SHT4x air temperature and humidity on I2C bus 1, address $ADDR
+    location: $loc
+    interval_s: 60
+    options: {bus: 1, address: $ADDR}
+"
+  OVERRIDE_DEVICES+="      - /dev/i2c-1
+"
+  NEED_I2C_GROUP=1
+elif [ -f "$CONFIG_TXT" ] && grep -q '^dtparam=i2c_arm=on' "$CONFIG_TXT" && [ ! -e /dev/i2c-1 ]; then
+  echo "I2C is switched on in $CONFIG_TXT but /dev/i2c-1 isn't there yet: reboot, then run ./setup.sh again."
+fi
+
 # --- 5. Write the config ------------------------------------------------------------------------------
 say "Writing tankwatch.yaml"
 umask 077
@@ -158,15 +177,20 @@ printf 'sensors:\n%s' "$SENSORS" >> tankwatch.yaml
 chmod 600 tankwatch.yaml
 
 # The collector runs as whoever ran setup.sh (it owns tankwatch.yaml, which only its owner can read), and joins the
-# gpio group only if a DHT sensor needs the GPIO pins
-GPIO_GID=""
-[ -n "$OVERRIDE_DEVICES" ] && GPIO_GID=$(getent group gpio 2>/dev/null | cut -d: -f3 || true)
+# gpio group only if a DHT sensor needs the GPIO pins, and the i2c group only if an I2C sensor needs the bus
+GIDS=()
+if [ -n "$DHT" ] && [[ "$DHT" =~ ^(11|22)$ ]]; then
+  g=$(getent group gpio 2>/dev/null | cut -d: -f3 || true); [ -n "$g" ] && GIDS+=("\"$g\"")
+fi
+if [ "${NEED_I2C_GROUP:-0}" = 1 ]; then
+  g=$(getent group i2c 2>/dev/null | cut -d: -f3 || true); [ -n "$g" ] && GIDS+=("\"$g\"")
+fi
 {
   echo "# This Pi's settings for the collector container, written by setup.sh."
   echo "services:"
   echo "  node:"
   echo "    user: \"$(id -u):$(id -g)\""
-  [ -n "$GPIO_GID" ] && printf '    group_add: ["%s"]\n' "$GPIO_GID"
+  [ ${#GIDS[@]} -gt 0 ] && printf '    group_add: [%s]\n' "$(IFS=,; echo "${GIDS[*]}" | sed 's/,/, /g')"
   [ -n "$OVERRIDE_VOLUMES" ] && printf '    volumes:\n%s' "$OVERRIDE_VOLUMES"
   [ -n "$OVERRIDE_DEVICES" ] && printf '    devices:\n%s' "$OVERRIDE_DEVICES"
 } > docker-compose.override.yml

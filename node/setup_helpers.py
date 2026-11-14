@@ -4,7 +4,8 @@
   read-hub FILE                 the hub: section of an existing tankwatch.yaml, as JSON (nothing if none)
   previous FILE KEY             an earlier answer from tankwatch.yaml, so a re-run offers it as the default:
                                 "node", "probe:<serial>" (that probe's location), "dht" (11/22/n),
-                                "dht-pin", "dht-location"
+                                "dht-pin", "dht-location", "sht4x-location"
+  sht4x BUS                     an SHT4x air sensor on /dev/i2c-BUS: its address and one reading (nothing if none)
   join CODE                     a collector join code's hub settings, as JSON
   get JSON KEY                  one value from a JSON object
   find HUB_ID URL               the hub's address if it's found on the network (nothing if not)
@@ -48,6 +49,9 @@ def previous(path, key):
         if key.startswith("probe:") and key[6:] in entry and entry.startswith("type: ds18b20"):
             print(loc.group(1) if loc else "")
             return
+        if key == "sht4x-location" and entry.startswith("type: sht4x"):
+            print(loc.group(1) if loc else "")
+            return
         if entry.startswith("type: dht"):
             model = re.search(r"model:\s*dht(\d+)", entry)
             pin = re.search(r"pin:\s*D(\d+)", entry)
@@ -65,6 +69,18 @@ def join(code):
     if j["role"] != "collector":
         sys.exit("That is the DISPLAY join code. A collector needs the COLLECTOR join code.")
     print(json.dumps({k: j[k] for k in ("id", "url", "org", "bucket", "token")}))
+
+
+def sht4x(bus):
+    """Try each address an SHT4x can have. Prints "0x44 71.2F 48%" for the first that gives a valid reading."""
+    from sensors import sht4x as sensor
+    for address in (0x44, 0x45, 0x46):
+        try:
+            (_, _, f), = sensor.Sensor({"bus": bus, "address": address}).read()
+        except (RuntimeError, OSError):
+            continue
+        print("0x%02x %.1fF %.0f%%" % (address, f["temp_f"], f["humidity"]))
+        return
 
 
 def config(hub_json, url, name):
@@ -94,6 +110,8 @@ if __name__ == "__main__":
             print(hubs[0]["url"] if hubs else "")
         elif cmd == "host":
             print(discovery.host_of(args[0]))
+        elif cmd == "sht4x":
+            sht4x(args[0])
         elif cmd == "config":
             config(*args)
         else:

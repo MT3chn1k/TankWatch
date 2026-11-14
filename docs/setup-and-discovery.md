@@ -88,6 +88,8 @@ What it does, in order:
    - finds every DS18B20 probe on the 1-Wire bus, shows its current temperature, and asks where each one is,
    - if 1-Wire is switched off, offers to switch it on (that needs a reboot; run `./setup.sh` again afterwards),
    - asks whether a DHT11 or DHT22 is wired, on which GPIO, and where it is,
+   - if I2C is on, looks for an SHT40 / SHT41 / SHT45 air sensor (addresses 0x44, 0x45, 0x46) and, if one answers,
+     shows its reading and asks where it is,
    - always adds `node_health`, the Pi's own health.
 5. **Writes `tankwatch.yaml`** (readable only by you) and, if your sensors need hardware access,
    `docker-compose.override.yml`. You don't edit Docker files by hand.
@@ -125,7 +127,7 @@ locked down:
 | Filesystem | read-only, except its own `tankwatch.yaml` | read-only | changing its own code or leaving anything behind |
 | Gaining privileges | blocked (`no-new-privileges`) | blocked | a bug turning into root access |
 | Host files it can see | only the `node` folder (read-only, for disk use), its `tankwatch.yaml`, `/sys/bus/w1` if you have probes, and with a DHT on a Pi 3 / Pi 4 a read-only copy of the Pi's `/proc/cpuinfo` (`node/cpuinfo`, so the GPIO library recognises the Pi) | none | reading anything else on the Pi, including SSH keys (yours too) and password hashes: they aren't shared with it |
-| Devices | `/dev/gpiomem` or `/dev/gpiochip*` only if a DHT is wired (plus the `gpio` group) | the HAT's SPI devices | |
+| Devices | `/dev/gpiomem` or `/dev/gpiochip*` only if a DHT is wired (plus the `gpio` group); `/dev/i2c-1` only if an SHT4x is found (plus the `i2c` group) | the HAT's SPI devices | |
 
 What host networking still allows: it can reach anything on your home network that the Pi can, including services
 on the Pi that only listen on `localhost`. Treat it like any program you install on the Pi.

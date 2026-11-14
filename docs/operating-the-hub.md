@@ -88,6 +88,7 @@ collectors and displays follow. The beacon must stay on 8087: that's where devic
 | "hub rejected ... HTTP 401" in a collector's log | Its token is wrong or was deleted. Run `./setup.sh` on the collector with a fresh join code from the hub (`./setup.sh codes`). |
 | "hub ... not found on the network" | The hub is off, or this device can't see it: guest Wi-Fi and some mesh networks isolate devices, and a firewall on the hub can block port 8087. See [setup-and-discovery.md](setup-and-discovery.md). |
 | DHT sensor: "could not start" | Is GPIO given to the container (`devices:` in `node/docker-compose.yml`)? Is the `pin:` right (`D17` = GPIO17 = physical pin 11)? |
+| SHT4x: "no valid reading from /dev/i2c-1" | Is I2C switched on (`ls /dev/i2c-1`; if not, `sudo raspi-config nonint do_i2c 0` and reboot)? Does `sudo i2cdetect -y 1` show it at 44 (or 45 / 46, then set `address:`)? Is `/dev/i2c-1` under `devices:` in `node/docker-compose.override.yml`? |
 | DS18B20: "no probe found" | Is `dtoverlay=w1-gpio` in `/boot/firmware/config.txt` (then reboot)? Is the 4.7 kΩ resistor between data and 3.3 V? Is `/sys/bus/w1` mounted in `node/docker-compose.yml`? |
 | Grafana won't start after a restore | See the note under Restoring. |
 | Dashboards are empty | Is the time range right (top right)? Are the Location / Node pickers on All? Are any collectors running? |

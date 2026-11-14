@@ -94,7 +94,7 @@ Setup, buttons and the styles it can show (including a Road Rash race against yo
 | Raspberry Pi 5 (4 GB or more) or any 64-bit Linux computer | The hub | You may already have one |
 | Any Raspberry Pi (3B+ or newer, or a Zero 2 W) | Each collector | $15–60 |
 | DS18B20 waterproof probe + 4.7 kΩ resistor | Water temperature | $3–10 |
-| DHT11 or DHT22 | Air temperature and humidity | $2–10 |
+| DHT11 or DHT22, or an SHT40 / SHT41 / SHT45 breakout (more accurate, I2C) | Air temperature and humidity | $2–15 |
 | Jumper wires, a reliable power supply per Pi | | |
 | Pimoroni Galactic Unicorn (Pico 2 W version) | The status sign (optional) | |
 | Pimoroni Unicorn HAT Mini on any Pi | A small display (optional) | |
@@ -171,6 +171,7 @@ upgrades, security and troubleshooting are in [docs/operating-the-hub.md](docs/o
 |---|---|---|---|
 | `ds18b20` | Water / liquid temperature | DS18B20 waterproof probe + 4.7 kΩ resistor | Several probes can share one pin. [Wiring](docs/wiring/ds18b20-wiring.svg) |
 | `dht` | Air temperature + humidity | DHT11 or DHT22 | [Wiring](docs/wiring/dht11-wiring.svg) |
+| `sht4x` | Air temperature + humidity | Sensirion SHT40 / SHT41 / SHT45 on I2C | 3.3 V, GND, SDA → GPIO2 (pin 3), SCL → GPIO3 (pin 5). Switch I2C on: `sudo raspi-config nonint do_i2c 0`, then reboot. Needs no extra Python packages |
 | `node_health` | The Pi itself | none | CPU temp, undervolt/throttle, voltages, load, memory, disk |
 | `synthetic` | Realistic made-up data: a tank, a room, a plant, a feeder | none | For demos and the test lab |
 | `mock` | Simple fake data | none | For testing |
@@ -195,6 +196,7 @@ aquariums, with the status sign on a shelf. The packaged version here is new. Wh
 | Unicorn HAT Mini display | Its web version in the test lab. The real HAT: next, on a Raspberry Pi 4 |
 | `ds18b20` and `node_health` sensor code | A Raspberry Pi 3B+ with a real probe |
 | `dht` in the collector container | A Raspberry Pi 3B+ with a real DHT11, fully locked down |
+| `sht4x` | A Raspberry Pi 3B+ with a real SHT41, read side by side with an existing logger on the same sensor |
 | `dht` on a **Raspberry Pi 5** | Not yet tested. The collector image now includes `lgpio`, which the Pi 5 needs; please report how it goes |
 | Status sign | This version: its screens and shows on a PC simulator against a real hub. The original, home-specific version it came from runs the real sign every day |
 | Admin page | Against a real InfluxDB with sample collectors (healthy, amber, silent, new), in Chrome. The home setup has run its own version of it for weeks |
